@@ -25,8 +25,10 @@
 
 (defmethod draw ((e entity))
   (with-slots (x y char color) e
-    (setf (blt:color) color
-          (blt:cell-char x y) char)))
+    (setf
+     (blt:background-color) (blt:cell-background-color x y)
+     (blt:color) color
+     (blt:cell-char x y) char)))
 
 (defun render-all (entities map)
   (blt:clear)
@@ -62,7 +64,7 @@
   (blt:with-terminal
     (config)
     (setf *map* (make-instance 'game-map :w *map-width* :h *map-height*))
-    (initialize-tiles *map*)
+    (make-map *map*)
     (loop :with player = (make-instance 'entity
                                         :x (/ *screen-width* 2)
                                         :y (/ *screen-height* 2)
