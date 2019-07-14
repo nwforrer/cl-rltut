@@ -27,4 +27,5 @@
           (if (tile/block-sight (aref (game-map/tiles map) tx ty))
               (return))
 
-          (setf (tile/visible (aref (game-map/tiles map) tx ty)) t))))))
+          (setf (tile/visible (aref (game-map/tiles map) tx ty)) t
+                (tile/explored (aref (game-map/tiles map) tx ty)) t))))))

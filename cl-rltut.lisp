@@ -27,12 +27,13 @@
   (incf (entity/x e) dx)
   (incf (entity/y e) dy))
 
-(defmethod draw ((e entity))
+(defmethod draw ((e entity) (map game-map))
   (with-slots (x y char color) e
-    (setf
-     (blt:background-color) (blt:cell-background-color x y)
-     (blt:color) color
-     (blt:cell-char x y) char)))
+    (if (tile/visible (aref (game-map/tiles map) x y))
+        (setf
+         (blt:background-color) (blt:cell-background-color x y)
+         (blt:color) color
+         (blt:cell-char x y) char))))
 
 (defun render-all (entities map)
   (blt:clear)
@@ -40,16 +41,19 @@
     (dotimes (x *map-width*)
       (let* ((tile (aref (game-map/tiles map) x y))
              (wall (tile/block-sight tile))
-             (visible (tile/visible tile)))
-        (if visible
-            (if wall
-                (setf (blt:background-color) (getf *color-map* :light-wall))
-                (setf (blt:background-color) (getf *color-map* :light-ground)))
-            (if wall
-                (setf (blt:background-color) (getf *color-map* :dark-wall))
-                (setf (blt:background-color) (getf *color-map* :dark-ground)))))
-      (setf (blt:cell-char x y) #\Space)))
-  (mapc #'draw entities)
+             (visible (tile/visible tile))
+             (explored (tile/explored tile)))
+        (cond (visible
+               (if wall
+                   (setf (blt:background-color) (getf *color-map* :light-wall))
+                   (setf (blt:background-color) (getf *color-map* :light-ground)))
+               (setf (blt:cell-char x y) #\Space))
+              (explored
+               (if wall
+                   (setf (blt:background-color) (getf *color-map* :dark-wall))
+                   (setf (blt:background-color) (getf *color-map* :dark-ground)))
+               (setf (blt:cell-char x y) #\Space))))))
+  (mapc #'(lambda (entity) (draw entity map)) entities)
   (setf (blt:background-color) (blt:black))
   (blt:refresh))
 
