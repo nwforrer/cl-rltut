@@ -12,6 +12,8 @@
 (defparameter *room-min-size* 6)
 (defparameter *max-rooms* 30)
 
+(defparameter *max-enemies-per-room* 5)
+
 (defparameter *color-map* (list :dark-wall (blt:rgba 0 0 100)
                                 :dark-ground (blt:rgba 50 50 150)
                                 :light-wall (blt:rgba 130 110 50)
@@ -95,14 +97,9 @@
                                   :y (/ *screen-height* 2)
                                   :char #\@
                                   :color (blt:white)))
-           (npc (make-instance 'entity
-                               :x (- (/ *screen-width* 2) 5)
-                               :y (/ *screen-height* 2)
-                               :char #\@
-                               :color (blt:yellow)))
-           (entities (list player npc))
+           (entities (list player))
            (map (make-instance 'game-map :w *map-width* :h *map-height*)))
-      (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player)
+      (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
 
       (do ((exit nil (game-tick player entities map)))

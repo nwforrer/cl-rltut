@@ -73,7 +73,7 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
        (<= (rect/y1 rect) (rect/y2 other))
        (>= (rect/y2 rect) (rect/y1 other))))
 
-(defmethod make-map ((map game-map) max-rooms room-min-size room-max-size map-width map-height player)
+(defmethod make-map ((map game-map) max-rooms room-min-size room-max-size map-width map-height player entities max-enemies-per-room)
   (do* ((rooms nil)
         (num-rooms 0)
         (room-index 0 (1+ room-index))
@@ -105,10 +105,27 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
                     (t
                      (create-v-tunnel map prev-y new-y prev-x)
                      (create-h-tunnel map prev-x new-x new-y)))))
+        (place-entities map new-room entities max-enemies-per-room)
         (if (null rooms)
             (setf rooms (list new-room))
             (push new-room (cdr (last rooms))))
         (incf num-rooms)))))
+
+(defun entity-at (entities x y)
+  (dolist (entity entities)
+    (if (and (= (entity/x entity) x)
+             (= (entity/y entity) y))
+        (return entity))))
+
+(defmethod place-entities ((map game-map) (room rect) entities max-enemies-per-room)
+  (let ((num-monsters (random max-enemies-per-room)))
+    (dotimes (monster-index num-monsters)
+      (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
+            (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
+        (unless (entity-at entities x y)
+          (if (< (random 100) 80)
+              (nconc entities (list (make-instance 'entity :x x :y y :color (blt:green) :char #\o)))
+              (nconc entities (list (make-instance 'entity :x x :y y :color (blt:yellow) :char #\T)))))))))
 
 (defmethod create-room ((map game-map) (room rect))
   (map-tiles-loop (map tile
