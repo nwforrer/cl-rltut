@@ -19,6 +19,8 @@
                                 :light-wall (blt:rgba 130 110 50)
                                 :light-ground (blt:rgba 200 180 50)))
 
+(deftype game-states () '(member :player-turn :enemy-turn :exit))
+
 (defclass entity ()
   ((name :initarg :name :accessor entity/name)
    (x :initarg :x :accessor entity/x)
@@ -77,12 +79,13 @@
   (blt:set "window.size = ~Ax~A" *screen-width* *screen-height*)
   (blt:set "window.title = Roguelike"))
 
-(defun game-tick (player entities map)
+(defun game-tick (player entities map game-state)
+  (declare (type game-states game-state))
   (render-all entities map)
   (let* ((action (handle-keys))
          (move (getf action :move))
          (exit (getf action :quit)))
-    (when move
+    (when (and move (eql game-state :player-turn))
       (let ((destination-x (+ (entity/x player) (car move)))
             (destination-y (+ (entity/y player) (cdr move))))
         (unless (blocked-p map destination-x destination-y)
@@ -91,9 +94,18 @@
                    (format t "You kick the ~A.~%" (entity/name target)))
                   (t
                    (move player (car move) (cdr move))
-                   (fov map (entity/x player) (entity/y player))))))))
+                   (fov map (entity/x player) (entity/y player)))))
+          (setf game-state :enemy-turn))))
+    (when exit
+      (setf game-state :exit)))
 
-    exit))
+  (when (eql game-state :enemy-turn)
+    (dolist (entity entities)
+      (if (not (eql player entity))
+          (format t "The ~A sits idly.~%" (entity/name entity))))
+    (setf game-state :player-turn))
+
+  game-state)
 
 (defun main ()
   (blt:with-terminal
@@ -110,5 +122,5 @@
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
 
-      (do ((exit nil (game-tick player entities map)))
-          (exit)))))
+      (do ((game-state :player-turn (game-tick player entities map game-state)))
+          ((eql game-state :exit))))))
