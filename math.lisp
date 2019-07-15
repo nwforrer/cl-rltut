@@ -1,25 +1,5 @@
 (in-package :cl-rltut)
 
-(defstruct vec x y)
-
-(defgeneric add (val1 val2))
-
-(defmethod add ((val1 vec) (val2 vec))
-  (make-vec :x (+ (vec-x val1) (vec-x val2))
-            :y (+ (vec-y val1) (vec-y val2))))
-
-(defmethod minus ((val1 vec) (val2 vec))
-  (make-vec :x (- (vec-x val1) (vec-x val2))
-            :y (- (vec-y val1) (vec-y val2))))
-
-(defmethod multiply ((vec vec) (n number))
-  (make-vec :x (* (vec-x vec) n)
-            :y (* (vec-y vec) n)))
-
-(defmethod magnitude ((vec vec))
-  (sqrt (+ (expt (vec-x vec) 2)
-           (expt (vec-y vec) 2))))
-
 (defun degree-to-radian (degree)
   (* degree (/ pi 180)))
 

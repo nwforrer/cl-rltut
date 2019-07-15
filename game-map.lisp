@@ -31,13 +31,6 @@
    (height :initarg :h :accessor game-map/h)
    (tiles :accessor game-map/tiles)))
 
-(defmethod in-bounds-p ((map game-map) (pos vec))
-  (with-slots (width height) map
-    (not (or (minusp (vec-x pos))
-             (minusp (vec-y pos))
-             (>= (vec-x pos) width)
-             (>= (vec-y pos) height)))))
-
 (defmacro map-tiles-loop ((map tile-val &key (row-val (gensym)) (col-val (gensym)) (x-start 0) (y-start 0) (x-end nil) (y-end nil)) &body body)
   `(loop :for ,col-val :from ,x-start :below (if (null ,x-end) (game-map/w ,map) ,x-end)
          :do
