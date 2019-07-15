@@ -8,7 +8,7 @@
   :serial t
   :depends-on (#:cl-blt)
   :components ((:file "package")
-               (:file "cl-rltut")
                (:file "math")
                (:file "game-map")
-               (:file "fov")))
+               (:file "fov")
+               (:file "cl-rltut")))
