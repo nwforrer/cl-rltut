@@ -21,26 +21,6 @@
 
 (deftype game-states () '(member :player-turn :enemy-turn :exit))
 
-(defclass entity ()
-  ((name :initarg :name :accessor entity/name)
-   (x :initarg :x :accessor entity/x)
-   (y :initarg :y :accessor entity/y)
-   (char :initarg :char :accessor entity/char)
-   (color :initarg :color :accessor entity/color)
-   (blocks :initarg :blocks :accessor entity/blocks)))
-
-(defmethod move ((e entity) dx dy)
-  (incf (entity/x e) dx)
-  (incf (entity/y e) dy))
-
-(defmethod draw ((e entity) (map game-map))
-  (with-slots (x y char color) e
-    (if (tile/visible (aref (game-map/tiles map) x y))
-        (setf
-         (blt:background-color) (blt:cell-background-color x y)
-         (blt:color) color
-         (blt:cell-char x y) char))))
-
 (defun render-all (entities map)
   (blt:clear)
   (dotimes (y *map-height*)
@@ -59,20 +39,18 @@
                    (setf (blt:background-color) (getf *color-map* :dark-wall))
                    (setf (blt:background-color) (getf *color-map* :dark-ground)))
                (setf (blt:cell-char x y) #\Space))))))
-  (mapc #'(lambda (entity) (draw entity map)) entities)
+  (mapc #'(lambda (entity) (draw entity (game-map/tiles map))) entities)
   (setf (blt:background-color) (blt:black))
   (blt:refresh))
 
 (defun handle-keys ()
-  (let ((action nil))
-    (blt:key-case (blt:read)
-                  (:up (setf action (list :move (cons 0 -1))))
-                  (:down (setf action (list :move (cons 0 1))))
-                  (:left (setf action (list :move (cons -1 0))))
-                  (:right (setf action (list :move (cons 1 0))))
-                  (:escape (setf action (list :quit t)))
-                  (:close (setf action (list :quit t))))
-    action))
+  (blt:key-case (blt:read)
+                (:up (list :move (cons 0 -1)))
+                (:down (list :move (cons 0 1)))
+                (:left (list :move (cons -1 0)))
+                (:right (list :move (cons 1 0)))
+                (:escape (list :quit t))
+                (:close (list :quit t))))
 
 (defun config ()
   (blt:set "window.resizeable = true")
@@ -101,8 +79,8 @@
 
   (when (eql game-state :enemy-turn)
     (dolist (entity entities)
-      (if (not (eql player entity))
-          (format t "The ~A sits idly.~%" (entity/name entity))))
+      (if (entity/ai entity)
+          (take-turn (entity/ai entity) player map entities)))
     (setf game-state :player-turn))
 
   game-state)
@@ -110,13 +88,18 @@
 (defun main ()
   (blt:with-terminal
     (config)
-    (let* ((player (make-instance 'entity
+    (let* ((fighter-component (make-instance 'fighter
+                                             :hp 30
+                                             :defense 2
+                                             :power 5))
+           (player (make-instance 'entity
                                   :name "Player"
                                   :x (/ *screen-width* 2)
                                   :y (/ *screen-height* 2)
                                   :char #\@
                                   :color (blt:white)
-                                  :blocks t))
+                                  :blocks t
+                                  :fighter fighter-component))
            (entities (list player))
            (map (make-instance 'game-map :w *map-width* :h *map-height*)))
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)

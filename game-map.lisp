@@ -32,13 +32,11 @@
    (tiles :accessor game-map/tiles)))
 
 (defmacro map-tiles-loop ((map tile-val &key (row-val (gensym)) (col-val (gensym)) (x-start 0) (y-start 0) (x-end nil) (y-end nil)) &body body)
-  `(loop :for ,col-val :from ,x-start :below (if (null ,x-end) (game-map/w ,map) ,x-end)
-         :do
-            (loop :for ,row-val :from ,y-start :below (if (null ,y-end) (game-map/h ,map) ,y-end)
-                  :do
-                     (let ((,tile-val (aref (game-map/tiles ,map) ,col-val ,row-val)))
+  `(dorange (,col-val ,x-start (if (null ,x-end) (game-map/w ,map) ,x-end))
+     (dorange (,row-val ,y-start (if (null ,y-end) (game-map/h ,map) ,y-end))
+       (let ((,tile-val (aref (game-map/tiles ,map) ,col-val ,row-val)))
                        (declare (ignorable ,tile-val))
-                       ,@body))))
+         ,@body))))
 
 (defmethod initialize-instance :after ((map game-map) &key (initial-blocked-value t))
   "Initializes the TILES slot-value to a new array with dimensions WxH.
@@ -130,9 +128,18 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
       (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
             (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
         (unless (entity-at entities x y)
-          (if (< (random 100) 80)
-              (nconc entities (list (make-instance 'entity :name "Orc" :x x :y y :color (blt:green) :char #\o :blocks t)))
-              (nconc entities (list (make-instance 'entity :name "Troll" :x x :y y :color (blt:yellow) :char #\T :blocks t)))))))))
+          (cond ((< (random 100) 80)
+                 (let* ((fighter-component (make-instance 'fighter :hp 10 :defense 0 :power 3))
+                        (ai-component (make-instance 'basic-monster))
+                        (orc (make-instance 'entity :name "Orc" :x x :y y :color (blt:green) :char #\o :blocks t
+                                                    :fighter fighter-component :ai ai-component)))
+                   (nconc entities (list orc))))
+                (t
+                 (let* ((fighter-component (make-instance 'fighter :hp 16 :defense 1 :power 4))
+                        (ai-component (make-instance 'basic-monster))
+                        (troll (make-instance 'entity :name "Troll" :x x :y y :color (blt:yellow) :char #\T :blocks t
+                                                      :fighter fighter-component :ai ai-component)))
+                   (nconc entities (list troll))))))))))
 
 (defmethod create-room ((map game-map) (room rect))
   (map-tiles-loop (map tile
