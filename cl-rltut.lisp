@@ -45,10 +45,14 @@
 
 (defun handle-keys ()
   (blt:key-case (blt:read)
-                (:up (list :move (cons 0 -1)))
-                (:down (list :move (cons 0 1)))
-                (:left (list :move (cons -1 0)))
-                (:right (list :move (cons 1 0)))
+                ((or :up :k) (list :move (cons 0 -1)))
+                ((or :down :j) (list :move (cons 0 1)))
+                ((or :left :h) (list :move (cons -1 0)))
+                ((or :right :l) (list :move (cons 1 0)))
+                (:y (list :move (cons -1 -1)))
+                (:u (list :move (cons 1 -1)))
+                (:b (list :move (cons -1 1)))
+                (:n (list :move (cons 1 1)))
                 (:escape (list :quit t))
                 (:close (list :quit t))))
 
