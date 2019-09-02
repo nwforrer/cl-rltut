@@ -22,11 +22,11 @@
   (incf (entity/x e) dx)
   (incf (entity/y e) dy))
 
-(defgeneric move-towards (e target-x target-y map astar-map entities))
+(defgeneric move-towards (e target-x target-y map entities))
 
-(defmethod move-towards ((e entity) target-x target-y map astar-map entities)
+(defmethod move-towards ((e entity) target-x target-y map entities)
   (with-slots (x y) e
-    (let ((path (astar astar-map (cons x y) (cons target-x target-y))))
+    (let ((path (astar map (cons x y) (cons target-x target-y))))
       (when path
         (let ((next-location (nth 1 path)))
           (unless (blocking-entity-at entities (car next-location) (cdr next-location))
