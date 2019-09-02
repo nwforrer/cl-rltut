@@ -26,6 +26,20 @@
                       queue)
     node))
 
+(defun make-astar-map (map)
+  (declare (type game-map map))
+  (let ((astar-map nil))
+    (dorange (y 0 (game-map/h map))
+      (let ((row nil))
+        (dorange (x 0 (game-map/w map))
+          (let* ((tile-val (aref (game-map/tiles map) x y))
+                 (blocked-val 0))
+            (when (tile/blocked tile-val)
+              (setf blocked-val 1))
+            (setf row (append row (list blocked-val)))))
+        (setf astar-map (append astar-map (list row)))))
+    astar-map))
+
 (defun astar (maze start end)
   "Returns a list of cons cells as a path from the given start to the given end in the given maze."
   (let ((start-node (make-instance 'node :position start))

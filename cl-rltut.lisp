@@ -66,7 +66,8 @@
   (render-all entities map)
   (let* ((action (handle-keys))
          (move (getf action :move))
-         (exit (getf action :quit)))
+         (exit (getf action :quit))
+         (astar-map (make-astar-map map)))
     (when (and move (eql game-state :player-turn))
       (let ((destination-x (+ (entity/x player) (car move)))
             (destination-y (+ (entity/y player) (cdr move))))
@@ -79,13 +80,13 @@
                    (fov map (entity/x player) (entity/y player)))))
           (setf game-state :enemy-turn))))
     (when exit
-      (setf game-state :exit)))
+      (setf game-state :exit))
 
-  (when (eql game-state :enemy-turn)
-    (dolist (entity entities)
-      (if (entity/ai entity)
-          (take-turn (entity/ai entity) player map entities)))
-    (setf game-state :player-turn))
+    (when (eql game-state :enemy-turn)
+      (dolist (entity entities)
+        (if (entity/ai entity)
+            (take-turn (entity/ai entity) player map astar-map entities)))
+      (setf game-state :player-turn)))
 
   game-state)
 
