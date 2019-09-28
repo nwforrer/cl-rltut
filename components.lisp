@@ -15,6 +15,27 @@
     (unless max-hp
       (setf max-hp hp))))
 
+(defgeneric take-damage (component amount))
+
+(defmethod take-damage ((component fighter) amount)
+  (decf (fighter/hp component) amount))
+
+(defgeneric attack (component target))
+
+(defmethod attack ((component fighter) (target entity))
+  (let ((damage (- (fighter/power component) (fighter/defense (entity/fighter target)))))
+    (cond
+      ((> damage 0)
+       (take-damage (entity/fighter target) damage)
+       (format t "~A attacks ~A for ~A hit points.~%"
+               (entity/name (component/owner component))
+               (entity/name target)
+               damage))
+      (t
+       (format t "~A attacks ~A but does no damage.~%"
+               (entity/name (component/owner component))
+               (entity/name target))))))
+
 (defclass basic-monster (component) ())
 
 (defgeneric take-turn (component target map entities))
@@ -26,4 +47,4 @@
       (cond ((>= (distance-to monster target) 2)
              (move-towards monster (entity/x target) (entity/y target) map entities))
             ((> (fighter/hp (entity/fighter monster)) 0)
-             (format t "The ~A insults you! Your ego is damaged!~%" (entity/name monster)))))))
+             (attack (entity/fighter monster) target))))))
