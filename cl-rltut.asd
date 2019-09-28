@@ -6,7 +6,7 @@
   :license  "MIT"
   :version "0.0.1"
   :serial t
-  :depends-on (#:cl-blt #:queues.priority-queue)
+  :depends-on (#:cl-blt #:livesupport #:queues.priority-queue)
   :components ((:file "package")
                (:file "util")
                (:file "math")

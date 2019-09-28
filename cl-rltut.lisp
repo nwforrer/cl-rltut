@@ -19,7 +19,11 @@
                                 :light-wall (blt:rgba 130 110 50)
                                 :light-ground (blt:rgba 200 180 50)))
 
-(deftype game-states () '(member :player-turn :enemy-turn :exit))
+(defclass game-state ()
+  ((turn :initarg :turn :accessor game-state/turn)
+   (running :initarg :running :accessor game-state/running)))
+
+(defvar *state* nil)
 
 (defun render-all (entities map)
   (blt:clear)
@@ -44,50 +48,57 @@
   (blt:refresh))
 
 (defun handle-keys ()
-  (blt:key-case (blt:read)
-                ((or :up :k) (list :move (cons 0 -1)))
-                ((or :down :j) (list :move (cons 0 1)))
-                ((or :left :h) (list :move (cons -1 0)))
-                ((or :right :l) (list :move (cons 1 0)))
-                (:y (list :move (cons -1 -1)))
-                (:u (list :move (cons 1 -1)))
-                (:b (list :move (cons -1 1)))
-                (:n (list :move (cons 1 1)))
-                (:escape (list :quit t))
-                (:close (list :quit t))))
+  (when (blt:has-input-p)
+    (blt:key-case (blt:read)
+                  ((or :up :k) (list :move (cons 0 -1)))
+                  ((or :down :j) (list :move (cons 0 1)))
+                  ((or :left :h) (list :move (cons -1 0)))
+                  ((or :right :l) (list :move (cons 1 0)))
+                  (:y (list :move (cons -1 -1)))
+                  (:u (list :move (cons 1 -1)))
+                  (:b (list :move (cons -1 1)))
+                  (:n (list :move (cons 1 1)))
+                  (:escape (list :quit t))
+                  (:close (list :quit t)))))
 
 (defun config ()
   (blt:set "window.resizeable = true")
   (blt:set "window.size = ~Ax~A" *screen-width* *screen-height*)
+  (blt:set "output.vsync = true")
   (blt:set "window.title = Roguelike"))
 
 (defun game-tick (player entities map game-state)
-  (declare (type game-states game-state))
-  (render-all entities map)
-  (let* ((action (handle-keys))
-         (move (getf action :move))
-         (exit (getf action :quit)))
-    (when (and move (eql game-state :player-turn))
-      (let ((destination-x (+ (entity/x player) (car move)))
-            (destination-y (+ (entity/y player) (cdr move))))
-        (unless (blocked-p map destination-x destination-y)
-          (let ((target (blocking-entity-at entities destination-x destination-y)))
-            (cond (target
-                   (format t "You kick the ~A.~%" (entity/name target)))
-                  (t
-                   (move player (car move) (cdr move))
-                   (fov map (entity/x player) (entity/y player)))))
-          (setf game-state :enemy-turn))))
-    (when exit
-      (setf game-state :exit))
+  (declare (type game-state game-state))
+  (livesupport:update-repl-link)
+  (livesupport:continuable
+    (render-all entities map)
+    (let* ((action (handle-keys))
+           (move (getf action :move))
+           (exit (getf action :quit)))
+      (when (and move (eql (game-state/turn game-state) :player-turn))
+        (let ((destination-x (+ (entity/x player) (car move)))
+              (destination-y (+ (entity/y player) (cdr move))))
+          (unless (blocked-p map destination-x destination-y)
+            (let ((target (blocking-entity-at entities destination-x destination-y)))
+              (cond (target
+                     (format t "You kick the ~A.~%" (entity/name target)))
+                    (t
+                     (move player (car move) (cdr move))
+                     (fov map (entity/x player) (entity/y player)))))
+            (setf (game-state/turn game-state) :enemy-turn))))
+      (when exit
+        (setf (game-state/running game-state) nil))
 
-    (when (eql game-state :enemy-turn)
-      (dolist (entity entities)
-        (if (entity/ai entity)
-            (take-turn (entity/ai entity) player map entities)))
-      (setf game-state :player-turn)))
+      (when (eql (game-state/turn game-state) :enemy-turn)
+        (dolist (entity entities)
+          (if (entity/ai entity)
+              (take-turn (entity/ai entity) player map entities)))
+        (setf (game-state/turn game-state) :player-turn))))
 
   game-state)
+
+(defun stop ()
+  (setf (game-state/running *state*) nil))
 
 (defun main ()
   (blt:with-terminal
@@ -109,5 +120,5 @@
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
 
-      (do ((game-state :player-turn (game-tick player entities map game-state)))
-          ((eql game-state :exit))))))
+      (do ((*state* (make-instance 'game-state :running t :turn :player-turn) (game-tick player entities map *state*)))
+          ((null (game-state/running *state*)))))))
