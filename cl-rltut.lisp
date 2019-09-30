@@ -19,10 +19,6 @@
                                 :light-wall (blt:rgba 130 110 50)
                                 :light-ground (blt:rgba 200 180 50)))
 
-(defclass game-state ()
-  ((turn :initarg :turn :accessor game-state/turn)
-   (running :initarg :running :accessor game-state/running)))
-
 (defvar *state* nil)
 
 (defun render-all (entities map)
@@ -72,28 +68,58 @@
   (livesupport:update-repl-link)
   (livesupport:continuable
     (render-all entities map)
-    (let* ((action (handle-keys))
+    (let* ((player-turn-results nil)
+           (action (handle-keys))
            (move (getf action :move))
            (exit (getf action :quit)))
-      (when (and move (eql (game-state/turn game-state) :player-turn))
+      (when (and move (eql (game-state/state game-state) :player-turn))
         (let ((destination-x (+ (entity/x player) (car move)))
               (destination-y (+ (entity/y player) (cdr move))))
           (unless (blocked-p map destination-x destination-y)
             (let ((target (blocking-entity-at entities destination-x destination-y)))
               (cond (target
-                     (attack (entity/fighter player) target))
+                     (setf player-turn-results (attack (entity/fighter player) target)))
                     (t
                      (move player (car move) (cdr move))
                      (fov map (entity/x player) (entity/y player)))))
-            (setf (game-state/turn game-state) :enemy-turn))))
+            (setf (game-state/state game-state) :enemy-turn))))
       (when exit
         (setf (game-state/running game-state) nil))
 
-      (when (eql (game-state/turn game-state) :enemy-turn)
+      (let ((message (getf player-turn-results :message))
+            (dead-entity (getf player-turn-results :dead)))
+        (when message
+          (format t message))
+        (when dead-entity
+          (cond ((equal dead-entity player)
+                 (multiple-value-bind (death-message state) (kill-player dead-entity)
+                   (setf message death-message
+                         (game-state/state game-state) state)))
+                (t
+                 (setf message (kill-monster dead-entity))))
+          (format t message)))
+
+      (when (eql (game-state/state game-state) :enemy-turn)
         (dolist (entity entities)
-          (if (entity/ai entity)
-              (take-turn (entity/ai entity) player map entities)))
-        (setf (game-state/turn game-state) :player-turn))))
+          (when (entity/ai entity)
+            (let* ((enemy-turn-results (take-turn (entity/ai entity) player map entities))
+                   (message (getf enemy-turn-results :message))
+                   (dead-entity (getf enemy-turn-results :dead)))
+              (when message
+                (format t message))
+              (when dead-entity
+                (cond ((equal dead-entity player)
+                 (multiple-value-bind (death-message state) (kill-player dead-entity)
+                   (setf message death-message
+                         (game-state/state game-state) state)))
+                (t
+                 (setf message (kill-monster dead-entity))))
+                (format t message)
+
+                (when (eql (game-state/state game-state) :player-dead)
+                  (setf (game-state/running game-state) nil)
+                  (return game-state))))))
+        (setf (game-state/state game-state) :player-turn))))
 
   game-state)
 
@@ -120,5 +146,5 @@
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
 
-      (do ((*state* (make-instance 'game-state :running t :turn :player-turn) (game-tick player entities map *state*)))
+      (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state*)))
           ((null (game-state/running *state*)))))))

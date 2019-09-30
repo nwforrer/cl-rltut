@@ -15,4 +15,6 @@
                (:file "entity")
                (:file "components")
                (:file "fov")
+               (:file "game-states")
+               (:file "death-functions")
                (:file "cl-rltut")))
