@@ -21,7 +21,8 @@
 
 (defvar *state* nil)
 
-(defun render-all (entities map)
+(defun render-all (entities player map screen-width screen-height)
+  (declare (ignore screen-width))
   (blt:clear)
   (dotimes (y *map-height*)
     (dotimes (x *map-width*)
@@ -40,7 +41,12 @@
                    (setf (blt:background-color) (getf *color-map* :dark-ground)))
                (setf (blt:cell-char x y) #\Space))))))
   (mapc #'(lambda (entity) (draw entity (game-map/tiles map))) entities)
-  (setf (blt:background-color) (blt:black))
+  (setf (blt:background-color) (blt:black)
+        (blt:color) (blt:white))
+  (blt:print 1 (1- screen-height) (format nil "HP: ~2d/~2d"
+                                          (fighter/hp (entity/fighter player))
+                                          (fighter/max-hp (entity/fighter player))))
+
   (blt:refresh))
 
 (defun handle-keys ()
@@ -67,7 +73,7 @@
   (declare (type game-state game-state))
   (livesupport:update-repl-link)
   (livesupport:continuable
-    (render-all entities map)
+    (render-all entities player map *screen-width* *screen-height*)
     (let* ((player-turn-results nil)
            (action (handle-keys))
            (move (getf action :move))
@@ -92,9 +98,8 @@
           (format t message))
         (when dead-entity
           (cond ((equal dead-entity player)
-                 (multiple-value-bind (death-message state) (kill-player dead-entity)
-                   (setf message death-message
-                         (game-state/state game-state) state)))
+                 (setf (values message (game-state/state game-state))
+                       (kill-player dead-entity)))
                 (t
                  (setf message (kill-monster dead-entity))))
           (format t message)))
@@ -109,11 +114,10 @@
                 (format t message))
               (when dead-entity
                 (cond ((equal dead-entity player)
-                 (multiple-value-bind (death-message state) (kill-player dead-entity)
-                   (setf message death-message
-                         (game-state/state game-state) state)))
-                (t
-                 (setf message (kill-monster dead-entity))))
+                       (setf (values message (game-state/state game-state))
+                             (kill-player dead-entity)))
+                      (t
+                       (setf message (kill-monster dead-entity))))
                 (format t message)
 
                 (when (eql (game-state/state game-state) :player-dead)
