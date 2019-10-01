@@ -7,11 +7,11 @@
   (values "You died!" :player-dead))
 
 (defun kill-monster (monster)
-  (let ((death-message (format nil "~A is dead!" (entity/name monster))))
-    (with-slots (char color blocks ai name) monster
-      (setf char #\%
-            color (blt:red)
-            blocks nil
-            ai nil
-            name (format nil "remains of ~A" name)))
-    death-message))
+  (with-slots (char color blocks ai name render-order) monster
+    (setf char #\%
+          color (blt:red)
+          blocks nil
+          ai nil
+          name (format nil "remains of ~A" name)
+          render-order :corpse)
+    (format nil "~A is dead!" name)))

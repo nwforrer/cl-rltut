@@ -21,34 +21,6 @@
 
 (defvar *state* nil)
 
-(defun render-all (entities player map screen-width screen-height)
-  (declare (ignore screen-width))
-  (blt:clear)
-  (dotimes (y *map-height*)
-    (dotimes (x *map-width*)
-      (let* ((tile (aref (game-map/tiles map) x y))
-             (wall (tile/block-sight tile))
-             (visible (tile/visible tile))
-             (explored (tile/explored tile)))
-        (cond (visible
-               (if wall
-                   (setf (blt:background-color) (getf *color-map* :light-wall))
-                   (setf (blt:background-color) (getf *color-map* :light-ground)))
-               (setf (blt:cell-char x y) #\Space))
-              (explored
-               (if wall
-                   (setf (blt:background-color) (getf *color-map* :dark-wall))
-                   (setf (blt:background-color) (getf *color-map* :dark-ground)))
-               (setf (blt:cell-char x y) #\Space))))))
-  (mapc #'(lambda (entity) (draw entity (game-map/tiles map))) entities)
-  (setf (blt:background-color) (blt:black)
-        (blt:color) (blt:white))
-  (blt:print 1 (1- screen-height) (format nil "HP: ~2d/~2d"
-                                          (fighter/hp (entity/fighter player))
-                                          (fighter/max-hp (entity/fighter player))))
-
-  (blt:refresh))
-
 (defun handle-keys ()
   (when (blt:has-input-p)
     (blt:key-case (blt:read)
@@ -143,6 +115,7 @@
                                   :char #\@
                                   :color (blt:white)
                                   :blocks t
+                                  :render-order :actor
                                   :fighter fighter-component))
            (entities (list player))
            (map (make-instance 'game-map :w *map-width* :h *map-height*)))

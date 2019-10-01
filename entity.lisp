@@ -7,16 +7,22 @@
    (char :initarg :char :accessor entity/char)
    (color :initarg :color :accessor entity/color)
    (blocks :initarg :blocks :accessor entity/blocks)
+   (render-order :initarg :render-order :accessor entity/render-order :initform :corpse)
    (fighter :initarg :fighter :accessor entity/fighter :initform nil)
    (ai :initarg :ai :accessor entity/ai :initform nil)))
 
 (defmethod initialize-instance :after ((entity entity) &rest initargs)
   (declare (ignore initargs))
-  (with-slots (fighter ai) entity
+  (with-slots (fighter ai render-order) entity
     (when fighter
       (setf (component/owner fighter) entity))
     (when ai
       (setf (component/owner ai) entity))))
+
+(defmethod print-object ((obj entity) stream)
+  (print-unreadable-object (obj stream :type t)
+    (with-slots (name) obj
+      (format stream "~A" name))))
 
 (defmethod move ((e entity) dx dy)
   (incf (entity/x e) dx)

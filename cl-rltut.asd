@@ -11,6 +11,7 @@
                (:file "util")
                (:file "math")
                (:file "game-map")
+               (:file "rendering")
                (:file "pathfinding")
                (:file "entity")
                (:file "components")

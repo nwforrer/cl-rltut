@@ -132,12 +132,14 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
                  (let* ((fighter-component (make-instance 'fighter :hp 10 :defense 0 :power 3))
                         (ai-component (make-instance 'basic-monster))
                         (orc (make-instance 'entity :name "Orc" :x x :y y :color (blt:green) :char #\o :blocks t
+                                                    :render-order :actor
                                                     :fighter fighter-component :ai ai-component)))
                    (nconc entities (list orc))))
                 (t
                  (let* ((fighter-component (make-instance 'fighter :hp 16 :defense 1 :power 4))
                         (ai-component (make-instance 'basic-monster))
                         (troll (make-instance 'entity :name "Troll" :x x :y y :color (blt:yellow) :char #\T :blocks t
+                                                      :render-order :actor
                                                       :fighter fighter-component :ai ai-component)))
                    (nconc entities (list troll))))))))))
 
