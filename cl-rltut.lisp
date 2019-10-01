@@ -121,8 +121,7 @@
                 (format t message)
 
                 (when (eql (game-state/state game-state) :player-dead)
-                  (setf (game-state/running game-state) nil)
-                  (return game-state))))))
+                  (return-from game-tick game-state))))))
         (setf (game-state/state game-state) :player-turn))))
 
   game-state)

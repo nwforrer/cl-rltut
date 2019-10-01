@@ -2,7 +2,7 @@
 
 (defun kill-player (player)
   (setf (entity/char player) #\%
-        (entity/color player) (blt:rgba 114 47 55))
+        (entity/color player) (blt:red))
 
   (values "You died!" :player-dead))
 
@@ -10,7 +10,7 @@
   (let ((death-message (format nil "~A is dead!" (entity/name monster))))
     (with-slots (char color blocks ai name) monster
       (setf char #\%
-            color (blt:rgba 114 47 55)
+            color (blt:red)
             blocks nil
             ai nil
             name (format nil "remains of ~A" name)))
