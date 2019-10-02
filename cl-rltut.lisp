@@ -77,23 +77,22 @@
           (format t message)))
 
       (when (eql (game-state/state game-state) :enemy-turn)
-        (dolist (entity entities)
-          (when (entity/ai entity)
-            (let* ((enemy-turn-results (take-turn (entity/ai entity) player map entities))
-                   (message (getf enemy-turn-results :message))
-                   (dead-entity (getf enemy-turn-results :dead)))
-              (when message
-                (format t message))
-              (when dead-entity
-                (cond ((equal dead-entity player)
-                       (setf (values message (game-state/state game-state))
-                             (kill-player dead-entity)))
-                      (t
-                       (setf message (kill-monster dead-entity))))
-                (format t message)
+        (dolist (entity (remove-if-not #'entity/ai entities))
+          (let* ((enemy-turn-results (take-turn (entity/ai entity) player map entities))
+                 (message (getf enemy-turn-results :message))
+                 (dead-entity (getf enemy-turn-results :dead)))
+            (when message
+              (format t message))
+            (when dead-entity
+              (cond ((equal dead-entity player)
+                     (setf (values message (game-state/state game-state))
+                           (kill-player dead-entity)))
+                    (t
+                     (setf message (kill-monster dead-entity))))
+              (format t message)
 
-                (when (eql (game-state/state game-state) :player-dead)
-                  (return-from game-tick game-state))))))
+              (when (eql (game-state/state game-state) :player-dead)
+                (return-from game-tick game-state)))))
         (setf (game-state/state game-state) :player-turn))))
 
   game-state)
