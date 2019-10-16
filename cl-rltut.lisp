@@ -43,57 +43,55 @@
 
 (defun game-tick (player entities map game-state)
   (declare (type game-state game-state))
-  (livesupport:update-repl-link)
-  (livesupport:continuable
-    (render-all entities player map *screen-width* *screen-height*)
-    (let* ((player-turn-results nil)
-           (action (handle-keys))
-           (move (getf action :move))
-           (exit (getf action :quit)))
-      (when (and move (eql (game-state/state game-state) :player-turn))
-        (let ((destination-x (+ (entity/x player) (car move)))
-              (destination-y (+ (entity/y player) (cdr move))))
-          (unless (blocked-p map destination-x destination-y)
-            (let ((target (blocking-entity-at entities destination-x destination-y)))
-              (cond (target
-                     (setf player-turn-results (attack (entity/fighter player) target)))
-                    (t
-                     (move player (car move) (cdr move))
-                     (fov map (entity/x player) (entity/y player)))))
-            (setf (game-state/state game-state) :enemy-turn))))
-      (when exit
-        (setf (game-state/running game-state) nil))
+  (render-all entities player map *screen-width* *screen-height*)
+  (let* ((player-turn-results nil)
+         (action (handle-keys))
+         (move (getf action :move))
+         (exit (getf action :quit)))
+    (when (and move (eql (game-state/state game-state) :player-turn))
+      (let ((destination-x (+ (entity/x player) (car move)))
+            (destination-y (+ (entity/y player) (cdr move))))
+        (unless (blocked-p map destination-x destination-y)
+          (let ((target (blocking-entity-at entities destination-x destination-y)))
+            (cond (target
+                   (setf player-turn-results (attack (entity/fighter player) target)))
+                  (t
+                   (move player (car move) (cdr move))
+                   (fov map (entity/x player) (entity/y player)))))
+          (setf (game-state/state game-state) :enemy-turn))))
+    (when exit
+      (setf (game-state/running game-state) nil))
 
-      (let ((message (getf player-turn-results :message))
-            (dead-entity (getf player-turn-results :dead)))
-        (when message
-          (format t message))
-        (when dead-entity
-          (cond ((equal dead-entity player)
-                 (setf (values message (game-state/state game-state))
-                       (kill-player dead-entity)))
-                (t
-                 (setf message (kill-monster dead-entity))))
-          (format t message)))
+    (let ((message (getf player-turn-results :message))
+          (dead-entity (getf player-turn-results :dead)))
+      (when message
+        (format t message))
+      (when dead-entity
+        (cond ((equal dead-entity player)
+               (setf (values message (game-state/state game-state))
+                     (kill-player dead-entity)))
+              (t
+               (setf message (kill-monster dead-entity))))
+        (format t message)))
 
-      (when (eql (game-state/state game-state) :enemy-turn)
-        (dolist (entity (remove-if-not #'entity/ai entities))
-          (let* ((enemy-turn-results (take-turn (entity/ai entity) player map entities))
-                 (message (getf enemy-turn-results :message))
-                 (dead-entity (getf enemy-turn-results :dead)))
-            (when message
-              (format t message))
-            (when dead-entity
-              (cond ((equal dead-entity player)
-                     (setf (values message (game-state/state game-state))
-                           (kill-player dead-entity)))
-                    (t
-                     (setf message (kill-monster dead-entity))))
-              (format t message)
+    (when (eql (game-state/state game-state) :enemy-turn)
+      (dolist (entity (remove-if-not #'entity/ai entities))
+        (let* ((enemy-turn-results (take-turn (entity/ai entity) player map entities))
+               (message (getf enemy-turn-results :message))
+               (dead-entity (getf enemy-turn-results :dead)))
+          (when message
+            (format t message))
+          (when dead-entity
+            (cond ((equal dead-entity player)
+                   (setf (values message (game-state/state game-state))
+                         (kill-player dead-entity)))
+                  (t
+                   (setf message (kill-monster dead-entity))))
+            (format t message)
 
-              (when (eql (game-state/state game-state) :player-dead)
-                (return-from game-tick game-state)))))
-        (setf (game-state/state game-state) :player-turn))))
+            (when (eql (game-state/state game-state) :player-dead)
+              (return-from game-tick game-state)))))
+      (setf (game-state/state game-state) :player-turn)))
 
   game-state)
 
