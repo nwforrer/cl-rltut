@@ -24,12 +24,16 @@
       (format stream "~A, parent ~A" position parent))))
 
 (defun node-equal (n1 n2)
+  "The two nodes are equal if their position slots are equal."
   (equal (node/position n1) (node/position n2)))
 
 (defun node-compare (n1 n2)
+  "Compares the F slots on the node, and returns true if n1's F slot is less than n2's."
   (< (node/f n1) (node/f n2)))
 
 (defun find-in-queue (queue n)
+  "Finds the node N in the QUEUE by it's position. If there are multiple nodes
+with the same position, it will return the last one it finds."
   (let ((node nil))
     (queues:map-queue #'(lambda (item)
                           (when (node-equal n item)
@@ -44,14 +48,19 @@
       ((null current) (reverse path))
     (setf path (append path (list (node/position current))))))
 
-(defun make-node (parent-node node-position direction-from-parent)
+(defun make-node (parent-node node-x node-y direction-from-parent)
+  "Creates a NODE instance with the given PARENT, NODE-X and NODE-Y, and calculates the
+DISTANCE-FROM-PARENT."
   (let ((distance 10))
     (if (and (not (zerop (car direction-from-parent)))
              (not (zerop (cdr direction-from-parent))))
         (setf distance 14))
-    (make-instance 'node :parent parent-node :position node-position :distance-from-parent distance)))
+    (make-instance 'node :parent parent-node
+                         :position (cons node-x node-y)
+                         :distance-from-parent distance)))
 
 (defun generate-node-cost (child current-node end-node)
+  "Calculates and sets the G, H, and F slots on child."
   (with-slots (g h f position distance-from-parent) child
     (setf g (+ distance-from-parent (node/g current-node))
           h (+ (expt (- (car position) (car (node/position end-node))) 2)
@@ -59,6 +68,9 @@
           f (+ g h))))
 
 (defun update-open-queue (open-list child-node)
+  "Updates an existing entry in OPEN-LIST if one exists that both matches CHILD-NODE, and
+has a larger G value. If there is no existing entry matching CHILD-NODE, then if pushes
+CHILD-NODE onto OPEN-LIST."
   (let ((existing-child (find-in-queue open-list child-node)))
     (cond ((and existing-child (< (node/g child-node) (node/g existing-child)))
            (queues:queue-change open-list
@@ -68,17 +80,20 @@
            (queues:qpush open-list child-node)))))
 
 (defun generate-node-children (current-node map open-list closed-list end-node)
+  "Generates a list of all valid nodes that can be moved to from CURRENT-NODE,
+and adds them to OPEN-QUEUE. A valid node is one that is within the MAP dimensions,
+the tile is not blocking, and the node is not on CLOSED-LIST."
   (dolist (new-position *all-directions*)
-    (let ((node-position (cons (+ (car (node/position current-node))
-                                  (car new-position))
-                               (+ (cdr (node/position current-node))
-                                  (cdr new-position)))))
-      (unless (or (> (car node-position) (1- (game-map/w map)))
-                  (< (car node-position) 0)
-                  (> (cdr node-position) (1- (game-map/h map)))
-                  (< (cdr node-position) 0))
-        (unless (tile/blocked (aref (game-map/tiles map) (car node-position) (cdr node-position)))
-          (let ((child (make-node current-node node-position new-position)))
+    (let ((node-x (+ (car (node/position current-node))
+                     (car new-position)))
+          (node-y (+ (cdr (node/position current-node))
+                     (cdr new-position))))
+      (unless (or (> node-x (1- (game-map/w map)))
+                  (< node-x 0)
+                  (> node-y (1- (game-map/h map)))
+                  (< node-y 0))
+        (unless (tile/blocked (aref (game-map/tiles map) node-x node-y))
+          (let ((child (make-node current-node node-x node-y new-position)))
             ;; child is on the closed list
             (unless (find child closed-list :test 'node-equal)
               (generate-node-cost child current-node end-node)

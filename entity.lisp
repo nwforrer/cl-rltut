@@ -13,7 +13,7 @@
 
 (defmethod initialize-instance :after ((entity entity) &rest initargs)
   (declare (ignore initargs))
-  (with-slots (fighter ai render-order) entity
+  (with-slots (fighter ai) entity
     (when fighter
       (setf (component/owner fighter) entity))
     (when ai
