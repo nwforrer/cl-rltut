@@ -41,8 +41,9 @@
   (blt:set "output.vsync = true")
   (blt:set "window.title = Roguelike"))
 
-(defun game-tick (player entities map game-state stats-panel)
+(defun game-tick (player entities map game-state stats-panel log)
   (declare (type game-state game-state))
+  (declare (type message-log log))
   (render-all entities player map stats-panel *screen-width* *screen-height*)
   (let* ((player-turn-results nil)
          (action (handle-keys))
@@ -65,14 +66,14 @@
     (let ((message (getf player-turn-results :message))
           (dead-entity (getf player-turn-results :dead)))
       (when message
-        (format t message))
+        (add-message log message))
       (when dead-entity
         (cond ((equal dead-entity player)
                (setf (values message (game-state/state game-state))
                      (kill-player dead-entity)))
               (t
                (setf message (kill-monster dead-entity))))
-        (format t message)))
+        (add-message log message :color (blt:orange))))
 
     (when (eql (game-state/state game-state) :enemy-turn)
       (dolist (entity (remove-if-not #'entity/ai entities))
@@ -80,14 +81,14 @@
                (message (getf enemy-turn-results :message))
                (dead-entity (getf enemy-turn-results :dead)))
           (when message
-            (format t message))
+            (add-message log message))
           (when dead-entity
             (cond ((equal dead-entity player)
                    (setf (values message (game-state/state game-state))
                          (kill-player dead-entity)))
                   (t
                    (setf message (kill-monster dead-entity))))
-            (format t message)
+            (add-message log message :color (blt:red))
 
             (when (eql (game-state/state game-state) :player-dead)
               (return-from game-tick game-state)))))
@@ -116,7 +117,8 @@
                                   :fighter fighter-component))
            (entities (list player))
            (map (make-instance 'game-map :w *map-width* :h *map-height*))
-           (stats-panel (make-panel 0 *map-height* *screen-width* (- *screen-height* *map-height*))))
+           (stats-panel (make-panel 0 *map-height* *screen-width* (- *screen-height* *map-height*)))
+           (message-log (make-message-log stats-panel 20 1 (- *screen-width* 20) (- *screen-height* *map-height*))))
       (make-bar "HP" stats-panel 1 1 15
                 (fighter/hp fighter-component)
                 (blt:rgba 0 128 0) (blt:rgba 100 100 100)
@@ -125,5 +127,5 @@
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
 
-      (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state* stats-panel)))
+      (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state* stats-panel message-log)))
           ((null (game-state/running *state*)))))))

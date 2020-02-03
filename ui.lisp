@@ -43,7 +43,8 @@
                                  :value value :maximum value
                                  :value-bind value-bind :max-bind max-bind
                                  :color color :bg-color bg-color)))
-    (setf (panel/components panel) (append (panel/components panel) (list bar)))))
+    (setf (panel/components panel) (append (panel/components panel) (list bar)))
+    bar))
 
 (defmethod render-panel ((panel panel))
   (with-slots (x y width height components) panel
@@ -52,6 +53,7 @@
         (render component))))
 
 (defgeneric render (component))
+
 (defmethod render ((bar bar))
   (with-slots (name panel x y total-width value value-bind maximum max-bind color bg-color) bar
     (when value-bind
@@ -69,3 +71,48 @@
       (setf (blt:color) (blt:rgba 255 255 255))
       (blt:draw-box x-pos (1- y-pos) total-width 2 :background-color nil :border nil
                                                    :contents content))))
+
+(defclass message-log ()
+  ((messages :initarg :messages :accessor message-log/messages :initform nil)
+   (panel :initarg :panel :accessor message-log/panel)
+   (x :initarg :x :accessor message-log/x)
+   (y :initarg :y :accessor message-log/y)
+   (width :initarg :width :accessor message-log/width)
+   (height :initarg :height :accessor message-log/height)))
+
+(defclass message ()
+  ((text :initarg :text :accessor message/text)
+   (color :initarg :color :accessor message/color)))
+
+(defun make-message-log (panel x y width height)
+  (let ((log (make-instance 'message-log :panel panel :x x :y y :width width :height height)))
+    (setf (panel/components panel) (append (panel/components panel) (list log)))
+    log))
+
+(defun word-wrap (full-line width)
+  (do ((lines nil)
+       (line full-line))
+      ((zerop (length line)) lines)
+    (cond ((< (length line) width)
+           (setf lines (append lines (list line))
+                 line nil))
+           (t
+            (setf lines (append lines (list (subseq line 0 width)))
+                  line (subseq line width))))))
+
+(defgeneric add-message (log message &key color))
+(defmethod add-message ((log message-log) message &key (color (blt:rgba 255 255 255)))
+  (with-slots (messages width height) log
+    (let ((wrapped-text (word-wrap message width)))
+      (dolist (text wrapped-text)
+        (setf messages (append messages (list (make-instance 'message :text text :color color))))
+        (when (>= (length messages) (1- height))
+          (setf messages (rest messages)))))))
+
+(defmethod render ((log message-log))
+  (let ((x (+ (message-log/x log) (panel/x (message-log/panel log))))
+        (y (+ (message-log/y log) (panel/y (message-log/panel log)))))
+    (dolist (message (message-log/messages log))
+      (setf (blt:color) (message/color message))
+      (blt:print x y (message/text message))
+      (incf y))))
