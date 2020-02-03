@@ -6,7 +6,7 @@
 (defparameter *screen-height* 50)
 
 (defparameter *map-width* 80)
-(defparameter *map-height* 45)
+(defparameter *map-height* 43)
 
 (defparameter *room-max-size* 10)
 (defparameter *room-min-size* 6)
@@ -41,9 +41,9 @@
   (blt:set "output.vsync = true")
   (blt:set "window.title = Roguelike"))
 
-(defun game-tick (player entities map game-state)
+(defun game-tick (player entities map game-state stats-panel)
   (declare (type game-state game-state))
-  (render-all entities player map *screen-width* *screen-height*)
+  (render-all entities player map stats-panel *screen-width* *screen-height*)
   (let* ((player-turn-results nil)
          (action (handle-keys))
          (move (getf action :move))
@@ -115,9 +115,15 @@
                                   :render-order :actor
                                   :fighter fighter-component))
            (entities (list player))
-           (map (make-instance 'game-map :w *map-width* :h *map-height*)))
+           (map (make-instance 'game-map :w *map-width* :h *map-height*))
+           (stats-panel (make-panel 0 *map-height* *screen-width* (- *screen-height* *map-height*))))
+      (make-bar "HP" stats-panel 1 1 15
+                (fighter/hp fighter-component)
+                (blt:rgba 0 128 0) (blt:rgba 100 100 100)
+                :value-bind #'(lambda () (fighter/hp fighter-component))
+                :max-bind #'(lambda () (fighter/max-hp fighter-component)))
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
 
-      (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state*)))
+      (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state* stats-panel)))
           ((null (game-state/running *state*)))))))

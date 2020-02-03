@@ -9,8 +9,8 @@
   (< (getf *render-order* (entity/render-order entity-1))
      (getf *render-order* (entity/render-order entity-2))))
 
-(defun render-all (entities player map screen-width screen-height)
-  (declare (ignore screen-width))
+(defun render-all (entities player map stats-panel screen-width screen-height)
+  (declare (ignore screen-width screen-height player))
   (blt:clear)
   (dotimes (y *map-height*)
     (dotimes (x *map-width*)
@@ -32,8 +32,6 @@
         (sort entities #'render-order-compare))
   (setf (blt:background-color) (blt:black)
         (blt:color) (blt:white))
-  (blt:print 1 (1- screen-height) (format nil "HP: ~2d/~2d"
-                                          (fighter/hp (entity/fighter player))
-                                          (fighter/max-hp (entity/fighter player))))
+  (render-panel stats-panel)
 
   (blt:refresh))
