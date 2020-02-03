@@ -39,6 +39,7 @@
   (blt:set "window.resizeable = true")
   (blt:set "window.size = ~Ax~A" *screen-width* *screen-height*)
   (blt:set "output.vsync = true")
+  (blt:set "input.filter = keyboard, mouse")
   (blt:set "window.title = Roguelike"))
 
 (defun game-tick (player entities map game-state stats-panel log)
@@ -118,14 +119,16 @@
            (entities (list player))
            (map (make-instance 'game-map :w *map-width* :h *map-height*))
            (stats-panel (make-panel 0 *map-height* *screen-width* (- *screen-height* *map-height*)))
-           (message-log (make-message-log stats-panel 20 1 (- *screen-width* 20) (- *screen-height* *map-height*))))
-      (make-bar "HP" stats-panel 1 1 15
+           (message-log (make-message-log stats-panel 20 2 (- *screen-width* 20) (- *screen-height* *map-height* 1))))
+      (make-bar "HP" stats-panel 1 2 15
                 (fighter/hp fighter-component)
                 (blt:rgba 0 128 0) (blt:rgba 100 100 100)
                 :value-bind #'(lambda () (fighter/hp fighter-component))
                 :max-bind #'(lambda () (fighter/max-hp fighter-component)))
       (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
       (fov map (entity/x player) (entity/y player))
+
+      (add-message message-log "Welcome to the dungeon!")
 
       (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state* stats-panel message-log)))
           ((null (game-state/running *state*)))))))
