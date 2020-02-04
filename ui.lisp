@@ -19,11 +19,13 @@
   (make-instance 'panel
                  :x x :y y :width width :height height))
 
-(defclass bar ()
+(defclass panel-component ()
+  ((panel :initarg :panel :accessor panel-component/panel)
+   (x :initarg :x :accessor panel-component/x)
+   (y :initarg :y :accessor panel-component/y)))
+
+(defclass bar (panel-component)
   ((name :initarg :name :accessor bar/name)
-   (panel :initarg :panel :accessor bar/panel)
-   (x :initarg :x :accessor bar/x)
-   (y :initarg :y :accessor bar/y)
    (total-width :initarg :total-width :accessor bar/total-width)
    (value :initarg :value :accessor bar/value)
    (value-bind :initarg :value-bind)
@@ -72,11 +74,8 @@
       (blt:draw-box x-pos (1- y-pos) total-width 2 :background-color nil :border nil
                                                    :contents content))))
 
-(defclass message-log ()
+(defclass message-log (panel-component)
   ((messages :initarg :messages :accessor message-log/messages :initform nil)
-   (panel :initarg :panel :accessor message-log/panel)
-   (x :initarg :x :accessor message-log/x)
-   (y :initarg :y :accessor message-log/y)
    (width :initarg :width :accessor message-log/width)
    (height :initarg :height :accessor message-log/height)))
 
@@ -110,8 +109,8 @@
           (setf messages (rest messages)))))))
 
 (defmethod render ((log message-log))
-  (let ((x (+ (message-log/x log) (panel/x (message-log/panel log))))
-        (y (+ (message-log/y log) (panel/y (message-log/panel log)))))
+  (let ((x (+ (panel-component/x log) (panel/x (panel-component/panel log))))
+        (y (+ (panel-component/y log) (panel/y (panel-component/panel log)))))
     (dolist (message (message-log/messages log))
       (setf (blt:color) (message/color message))
       (blt:print x y (message/text message))
