@@ -10,14 +10,16 @@
      (getf *render-order* (entity/render-order entity-2))))
 
 (defun get-names-under-mouse (x y entities map)
-  (let ((names nil)
-        (in-fov (tile/visible (aref (game-map/tiles map) x y))))
-    (when in-fov
-      (dolist (entity entities)
-        (when (and (= (entity/x entity) x)
-                   (= (entity/y entity) y))
-          (setf names (append names (list (entity/name entity)))))))
-    (format nil "~{~A~^, ~}" names)))
+  (when (and (< y (game-map/h map))
+             (< x (game-map/w map)))
+    (let ((names nil)
+          (in-fov (tile/visible (aref (game-map/tiles map) x y))))
+      (when in-fov
+        (dolist (entity entities)
+          (when (and (= (entity/x entity) x)
+                     (= (entity/y entity) y))
+            (setf names (append names (list (entity/name entity)))))))
+      (format nil "~{~A~^, ~}" names))))
 
 (defun render-all (entities player map stats-panel screen-width screen-height)
   (declare (ignore screen-width screen-height player))
@@ -44,7 +46,9 @@
         (blt:color) (blt:white))
   (render-panel stats-panel)
 
-  (setf (blt:color) (blt:yellow))
-  (blt:print (1+ (panel/x stats-panel)) (1+ (panel/y stats-panel)) (get-names-under-mouse (blt:mouse-x) (blt:mouse-y) entities map))
+  (let ((entity-names (get-names-under-mouse (blt:mouse-x) (blt:mouse-y) entities map)))
+    (when entity-names
+      (setf (blt:color) (blt:yellow))
+      (blt:print (1+ (panel/x stats-panel)) (1+ (panel/y stats-panel)) entity-names)))
 
   (blt:refresh))
