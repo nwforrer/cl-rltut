@@ -13,6 +13,7 @@
 (defparameter *max-rooms* 30)
 
 (defparameter *max-enemies-per-room* 5)
+(defparameter *max-items-per-room* 2)
 
 (defparameter *color-map* (list :dark-wall (blt:rgba 0 0 100)
                                 :dark-ground (blt:rgba 50 50 150)
@@ -125,7 +126,7 @@
                 (blt:rgba 0 128 0) (blt:rgba 100 100 100)
                 :value-bind #'(lambda () (fighter/hp fighter-component))
                 :max-bind #'(lambda () (fighter/max-hp fighter-component)))
-      (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room*)
+      (make-map map *max-rooms* *room-min-size* *room-max-size* *map-width* *map-height* player entities *max-enemies-per-room* *max-items-per-room*)
       (fov map (entity/x player) (entity/y player))
 
       (add-message message-log "Welcome to the dungeon!")

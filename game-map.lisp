@@ -71,7 +71,8 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
        (<= (rect/y1 rect) (rect/y2 other))
        (>= (rect/y2 rect) (rect/y1 other))))
 
-(defmethod make-map ((map game-map) max-rooms room-min-size room-max-size map-width map-height player entities max-enemies-per-room)
+(defgeneric make-map (map max-rooms room-min-size room-max-size map-width map-height player entities max-enemies-per-room max-items-per-room))
+(defmethod make-map ((map game-map) max-rooms room-min-size room-max-size map-width map-height player entities max-enemies-per-room max-items-per-room)
   (do* ((rooms nil)
         (num-rooms 0)
         (room-index 0 (1+ room-index))
@@ -103,7 +104,7 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
                     (t
                      (create-v-tunnel map prev-y new-y prev-x)
                      (create-h-tunnel map prev-x new-x new-y)))))
-        (place-entities map new-room entities max-enemies-per-room)
+        (place-entities map new-room entities max-enemies-per-room max-items-per-room)
         (if (null rooms)
             (setf rooms (list new-room))
             (push new-room (cdr (last rooms))))
@@ -122,26 +123,42 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
              (entity/blocks entity))
         (return entity))))
 
-(defmethod place-entities ((map game-map) (room rect) entities max-enemies-per-room)
-  (let ((num-monsters (random max-enemies-per-room)))
-    (dotimes (monster-index num-monsters)
-      (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
-            (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
-        (unless (entity-at entities x y)
-          (cond ((< (random 100) 80)
-                 (let* ((fighter-component (make-instance 'fighter :hp 10 :defense 0 :power 3))
-                        (ai-component (make-instance 'basic-monster))
-                        (orc (make-instance 'entity :name "Orc" :x x :y y :color (blt:green) :char #\o :blocks t
+(defun place-monsters (room entities num-monsters)
+  (dotimes (monster-index num-monsters)
+    (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
+          (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
+      (unless (entity-at entities x y)
+        (cond ((< (random 100) 80)
+               (let* ((fighter-component (make-instance 'fighter :hp 10 :defense 0 :power 3))
+                      (ai-component (make-instance 'basic-monster))
+                      (orc (make-instance 'entity :name "Orc" :x x :y y :color (blt:green) :char #\o :blocks t
+                                                  :render-order :actor
+                                                  :fighter fighter-component :ai ai-component)))
+                 (nconc entities (list orc))))
+              (t
+               (let* ((fighter-component (make-instance 'fighter :hp 16 :defense 1 :power 4))
+                      (ai-component (make-instance 'basic-monster))
+                      (troll (make-instance 'entity :name "Troll" :x x :y y :color (blt:yellow) :char #\T :blocks t
                                                     :render-order :actor
                                                     :fighter fighter-component :ai ai-component)))
-                   (nconc entities (list orc))))
-                (t
-                 (let* ((fighter-component (make-instance 'fighter :hp 16 :defense 1 :power 4))
-                        (ai-component (make-instance 'basic-monster))
-                        (troll (make-instance 'entity :name "Troll" :x x :y y :color (blt:yellow) :char #\T :blocks t
-                                                      :render-order :actor
-                                                      :fighter fighter-component :ai ai-component)))
-                   (nconc entities (list troll))))))))))
+                 (nconc entities (list troll)))))))))
+
+(defun place-items (room entities num-items)
+  (dotimes (item-index num-items)
+    (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
+          (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
+      (unless (entity-at entities x y)
+        (let ((item (make-instance 'entity :name "Healing Potion" :x x :y y :color (blt:purple)
+                                           :char #\! :blocks nil :render-order :item)))
+          (nconc entities (list item)))))))
+
+(defgeneric place-entities (map room entities max-enemies-per-room max-items-per-room))
+
+(defmethod place-entities ((map game-map) (room rect) entities max-enemies-per-room max-items-per-room)
+  (let ((num-monsters (random max-enemies-per-room))
+        (num-items (random (1+ max-items-per-room))))
+    (place-monsters room entities num-monsters)
+    (place-items room entities num-items)))
 
 (defmethod create-room ((map game-map) (room rect))
   (map-tiles-loop (map tile
