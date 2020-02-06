@@ -56,3 +56,22 @@
             ((> (fighter/hp (entity/fighter monster)) 0)
              (setf results (attack (entity/fighter monster) target)))))
     results))
+
+(defclass item (component) ())
+
+(defclass inventory (component)
+  ((capacity :initarg :capacity :accessor inventory/capacity)
+   (items :initarg :items :accessor inventory/items :initform nil)))
+
+(defgeneric add-item (inventory item))
+(defmethod add-item ((inventory inventory) (item entity))
+  (let ((results nil))
+    (with-slots (items capacity) inventory
+      (cond
+        ((>= (length items) capacity)
+         (setf results (list :item-added nil
+                             :message "You cannot carry any more, your inventory is full")))
+        (t
+         (setf results (list :item-added t
+                             :message (format nil "You pick up the ~A" (entity/name item)))))))
+    results))

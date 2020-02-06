@@ -33,6 +33,7 @@
                   (:u (list :move (cons 1 -1)))
                   (:b (list :move (cons -1 1)))
                   (:n (list :move (cons 1 1)))
+                  (:g (list :pickup t))
                   (:escape (list :quit t))
                   (:close (list :quit t)))))
 
@@ -43,30 +44,58 @@
   (blt:set "input.filter = keyboard, mouse")
   (blt:set "window.title = Roguelike"))
 
-(defun game-tick (player entities map game-state stats-panel log)
-  (declare (type game-state game-state))
-  (declare (type message-log log))
-  (render-all entities player map stats-panel *screen-width* *screen-height*)
-  (let* ((player-turn-results nil)
-         (action (handle-keys))
-         (move (getf action :move))
-         (exit (getf action :quit)))
-    (when (and move (eql (game-state/state game-state) :player-turn))
+(defun player-turn (game-state map player action)
+  (let ((player-turn-results nil)
+        (move (getf action :move))
+        (pickup (getf action :pickup)))
+    (when move
       (let ((destination-x (+ (entity/x player) (car move)))
             (destination-y (+ (entity/y player) (cdr move))))
         (unless (blocked-p map destination-x destination-y)
-          (let ((target (blocking-entity-at entities destination-x destination-y)))
+          (let ((target (blocking-entity-at (game-state/entities game-state) destination-x destination-y)))
             (cond (target
                    (setf player-turn-results (attack (entity/fighter player) target)))
                   (t
                    (move player (car move) (cdr move))
                    (fov map (entity/x player) (entity/y player)))))
           (setf (game-state/state game-state) :enemy-turn))))
-    (when exit
-      (setf (game-state/running game-state) nil))
+    (when pickup
+      (dolist (entity (game-state/entities game-state))
+        (when (and (entity/item entity)
+                   (= (entity/x entity) (entity/x player))
+                   (= (entity/y entity) (entity/y player)))
+          (setf player-turn-results (add-item (entity/inventory player) entity)))))
+    player-turn-results))
 
-    (let ((message (getf player-turn-results :message))
-          (dead-entity (getf player-turn-results :dead)))
+(defun handle-player-results (game-state player player-turn-results log)
+  (let ((message (getf player-turn-results :message))
+        (dead-entity (getf player-turn-results :dead))
+        (item-added (getf player-turn-results :item-added)))
+    (when message
+      (add-message log message))
+    (when dead-entity
+      (cond ((equal dead-entity player)
+             (setf (values message (game-state/state game-state))
+                   (kill-player dead-entity)))
+            (t
+             (setf message (kill-monster dead-entity))))
+      (add-message log message :color (blt:orange)))
+    (when item-added
+      (setf (game-state/entities game-state) (remove-if
+                                              #'(lambda (entity)
+                                                  (and (eql (entity/name entity)
+                                                            (entity/name item-added))
+                                                       (= (entity/x entity) (entity/x item-added))
+                                                       (= (entity/y entity) (entity/y item-added))))
+                                              (game-state/entities game-state))
+            (game-state/state game-state) :enemy-turn)))
+  game-state)
+
+(defun enemy-turn (game-state player map log)
+  (dolist (entity (remove-if-not #'entity/ai (game-state/entities game-state)))
+    (let* ((enemy-turn-results (take-turn (entity/ai entity) player map (game-state/entities game-state)))
+           (message (getf enemy-turn-results :message))
+           (dead-entity (getf enemy-turn-results :dead)))
       (when message
         (add-message log message))
       (when dead-entity
@@ -75,25 +104,29 @@
                      (kill-player dead-entity)))
               (t
                (setf message (kill-monster dead-entity))))
-        (add-message log message :color (blt:orange))))
+        (add-message log message :color (blt:red)))))
+  game-state)
+
+(defun game-tick (player map game-state stats-panel log)
+  (declare (type game-state game-state))
+  (declare (type message-log log))
+  (render-all (game-state/entities game-state) player map stats-panel *screen-width* *screen-height*)
+  (let* ((player-turn-results nil)
+         (action (handle-keys))
+         (exit (getf action :quit)))
+
+    (when (eql (game-state/state game-state) :player-turn)
+      (setf player-turn-results (player-turn game-state map player action)))
+
+    (when exit
+      (setf (game-state/running game-state) nil))
+
+    (setf game-state (handle-player-results game-state player player-turn-results log))
 
     (when (eql (game-state/state game-state) :enemy-turn)
-      (dolist (entity (remove-if-not #'entity/ai entities))
-        (let* ((enemy-turn-results (take-turn (entity/ai entity) player map entities))
-               (message (getf enemy-turn-results :message))
-               (dead-entity (getf enemy-turn-results :dead)))
-          (when message
-            (add-message log message))
-          (when dead-entity
-            (cond ((equal dead-entity player)
-                   (setf (values message (game-state/state game-state))
-                         (kill-player dead-entity)))
-                  (t
-                   (setf message (kill-monster dead-entity))))
-            (add-message log message :color (blt:red))
-
-            (when (eql (game-state/state game-state) :player-dead)
-              (return-from game-tick game-state)))))
+      (setf game-state (enemy-turn game-state player map log))
+      (when (eql (game-state/state game-state) :player-dead)
+          (return-from game-tick game-state))
       (setf (game-state/state game-state) :player-turn)))
 
   game-state)
@@ -108,6 +141,8 @@
                                              :hp 30
                                              :defense 2
                                              :power 5))
+           (inventory-component (make-instance 'inventory
+                                               :capacity 26))
            (player (make-instance 'entity
                                   :name "Player"
                                   :x (/ *screen-width* 2)
@@ -116,7 +151,8 @@
                                   :color (blt:white)
                                   :blocks t
                                   :render-order :actor
-                                  :fighter fighter-component))
+                                  :fighter fighter-component
+                                  :inventory inventory-component))
            (entities (list player))
            (map (make-instance 'game-map :w *map-width* :h *map-height*))
            (stats-panel (make-panel 0 *map-height* *screen-width* (- *screen-height* *map-height*)))
@@ -131,5 +167,5 @@
 
       (add-message message-log "Welcome to the dungeon!")
 
-      (do ((*state* (make-instance 'game-state :running t :state :player-turn) (game-tick player entities map *state* stats-panel message-log)))
+      (do ((*state* (make-instance 'game-state :running t :state :player-turn :entities entities) (game-tick player map *state* stats-panel message-log)))
           ((null (game-state/running *state*)))))))

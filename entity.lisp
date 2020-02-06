@@ -9,15 +9,21 @@
    (blocks :initarg :blocks :accessor entity/blocks)
    (render-order :initarg :render-order :accessor entity/render-order :initform :corpse)
    (fighter :initarg :fighter :accessor entity/fighter :initform nil)
-   (ai :initarg :ai :accessor entity/ai :initform nil)))
+   (ai :initarg :ai :accessor entity/ai :initform nil)
+   (item :initarg :item :accessor entity/item :initform nil)
+   (inventory :initarg :inventory :accessor entity/inventory :initform nil)))
 
 (defmethod initialize-instance :after ((entity entity) &rest initargs)
   (declare (ignore initargs))
-  (with-slots (fighter ai) entity
+  (with-slots (fighter ai item inventory) entity
     (when fighter
       (setf (component/owner fighter) entity))
     (when ai
-      (setf (component/owner ai) entity))))
+      (setf (component/owner ai) entity))
+    (when item
+      (setf (component/owner item) entity))
+    (when inventory
+      (setf (component/owner inventory) entity))))
 
 (defmethod print-object ((obj entity) stream)
   (print-unreadable-object (obj stream :type t)
