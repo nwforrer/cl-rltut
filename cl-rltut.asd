@@ -12,6 +12,7 @@
                (:file "math")
                (:file "game-map")
                (:file "ui")
+               (:file "menu")
                (:file "rendering")
                (:file "pathfinding")
                (:file "entity")

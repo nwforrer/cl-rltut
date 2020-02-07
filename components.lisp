@@ -72,6 +72,7 @@
          (setf results (list :item-added nil
                              :message "You cannot carry any more, your inventory is full")))
         (t
-         (setf results (list :item-added t
-                             :message (format nil "You pick up the ~A" (entity/name item)))))))
+         (setf results (list :item-added item
+                             :message (format nil "You pick up the ~A" (entity/name item))))
+         (setf items (append items (list item))))))
     results))

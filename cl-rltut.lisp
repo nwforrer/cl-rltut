@@ -22,7 +22,15 @@
 
 (defvar *state* nil)
 
-(defun handle-keys ()
+(defun handle-keys (game-state)
+  (cond ((eql (game-state/state game-state) :player-turn)
+         (handle-player-turn-keys))
+        ((eql (game-state/state game-state) :player-dead)
+         (handle-player-dead-keys))
+        ((eql (game-state/state game-state) :show-inventory)
+         (handle-inventory-keys))))
+
+(defun handle-player-turn-keys ()
   (when (blt:has-input-p)
     (blt:key-case (blt:read)
                   ((or :up :k) (list :move (cons 0 -1)))
@@ -34,8 +42,26 @@
                   (:b (list :move (cons -1 1)))
                   (:n (list :move (cons 1 1)))
                   (:g (list :pickup t))
+                  (:i (list :show-inventory t))
                   (:escape (list :quit t))
                   (:close (list :quit t)))))
+
+(defun handle-player-dead-keys ()
+  (when (blt:has-input-p)
+    (blt:key-case (blt:read)
+                  (:i (list :show-inventory t))
+                  (:escape (list :quit t)))))
+
+(defun handle-inventory-keys ()
+  (when (blt:has-input-p)
+    (let ((key (blt:read))
+          (char-key (blt:character-input)))
+      (when char-key
+        (let ((index (- (char-code char-key) (char-code #\a))))
+          (when (>= index 0)
+            (return-from handle-inventory-keys (list :inventory-index index)))))
+      (blt:key-case key
+                    (:escape (list :quit t))))))
 
 (defun config ()
   (blt:set "window.resizeable = true")
@@ -47,7 +73,8 @@
 (defun player-turn (game-state map player action)
   (let ((player-turn-results nil)
         (move (getf action :move))
-        (pickup (getf action :pickup)))
+        (pickup (getf action :pickup))
+        (show-inventory (getf action :show-inventory)))
     (when move
       (let ((destination-x (+ (entity/x player) (car move)))
             (destination-y (+ (entity/y player) (cdr move))))
@@ -59,13 +86,20 @@
                    (move player (car move) (cdr move))
                    (fov map (entity/x player) (entity/y player)))))
           (setf (game-state/state game-state) :enemy-turn))))
+
     (when pickup
       (dolist (entity (game-state/entities game-state))
         (when (and (entity/item entity)
                    (= (entity/x entity) (entity/x player))
                    (= (entity/y entity) (entity/y player)))
           (setf player-turn-results (add-item (entity/inventory player) entity)))))
-    player-turn-results))
+
+    (when show-inventory
+      (with-slots (previous-state state) game-state
+        (setf previous-state state
+              state :show-inventory)))
+
+    (values player-turn-results game-state)))
 
 (defun handle-player-results (game-state player player-turn-results log)
   (let ((message (getf player-turn-results :message))
@@ -110,16 +144,25 @@
 (defun game-tick (player map game-state stats-panel log)
   (declare (type game-state game-state))
   (declare (type message-log log))
-  (render-all (game-state/entities game-state) player map stats-panel *screen-width* *screen-height*)
+  (render-all game-state player map stats-panel *screen-width* *screen-height*)
   (let* ((player-turn-results nil)
-         (action (handle-keys))
+         (action (handle-keys game-state))
+         (inventory-index (getf action :inventory-index))
          (exit (getf action :quit)))
 
     (when (eql (game-state/state game-state) :player-turn)
-      (setf player-turn-results (player-turn game-state map player action)))
+      (setf (values player-turn-results game-state) (player-turn game-state map player action)))
+
+    (when (and inventory-index
+               (not (eql (game-state/previous-state game-state) :player-dead))
+               (< inventory-index (length (inventory/items (entity/inventory player)))))
+      (let ((item (nth inventory-index (inventory/items (entity/inventory player)))))
+        (format t "item: ~A~%" item)))
 
     (when exit
-      (setf (game-state/running game-state) nil))
+      (if (eql (game-state/state game-state) :show-inventory)
+          (setf (game-state/state game-state) (game-state/previous-state game-state))
+          (setf (game-state/running game-state) nil)))
 
     (setf game-state (handle-player-results game-state player player-turn-results log))
 

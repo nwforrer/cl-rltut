@@ -21,8 +21,7 @@
             (setf names (append names (list (entity/name entity)))))))
       (format nil "~{~A~^, ~}" names))))
 
-(defun render-all (entities player map stats-panel screen-width screen-height)
-  (declare (ignore screen-width screen-height player))
+(defun render-all (game-state player map stats-panel screen-width screen-height)
   (blt:clear)
   (dotimes (y *map-height*)
     (dotimes (x *map-width*)
@@ -40,15 +39,19 @@
                    (setf (blt:background-color) (getf *color-map* :dark-wall))
                    (setf (blt:background-color) (getf *color-map* :dark-ground)))
                (setf (blt:cell-char x y) #\Space))))))
-  (mapc #'(lambda (entity) (draw entity (game-map/tiles map)))
-        (sort entities #'render-order-compare))
-  (setf (blt:background-color) (blt:black)
-        (blt:color) (blt:white))
-  (render-panel stats-panel)
+  (let ((entities (game-state/entities game-state)))
+    (mapc #'(lambda (entity) (draw entity (game-map/tiles map)))
+          (sort entities #'render-order-compare))
+    (setf (blt:background-color) (blt:black)
+          (blt:color) (blt:white))
+    (render-panel stats-panel)
 
-  (let ((entity-names (get-names-under-mouse (blt:mouse-x) (blt:mouse-y) entities map)))
-    (when entity-names
-      (setf (blt:color) (blt:yellow))
-      (blt:print (1+ (panel/x stats-panel)) (1+ (panel/y stats-panel)) entity-names)))
+    (let ((entity-names (get-names-under-mouse (blt:mouse-x) (blt:mouse-y) entities map)))
+      (when entity-names
+        (setf (blt:color) (blt:yellow))
+        (blt:print (1+ (panel/x stats-panel)) (1+ (panel/y stats-panel)) entity-names))))
+
+  (when (eql (game-state/state game-state) :show-inventory)
+    (inventory-menu "Inventory" (entity/inventory player) 25 screen-width screen-height))
 
   (blt:refresh))
