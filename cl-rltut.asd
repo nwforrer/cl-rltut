@@ -10,6 +10,7 @@
   :components ((:file "package")
                (:file "util")
                (:file "math")
+               (:file "item-functions")
                (:file "game-map")
                (:file "ui")
                (:file "menu")

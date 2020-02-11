@@ -57,7 +57,9 @@
              (setf results (attack (entity/fighter monster) target)))))
     results))
 
-(defclass item (component) ())
+(defclass item (component)
+  ((use-function :initarg :use-function :accessor item/use-function :initform nil)
+   (use-args :initarg :use-args :accessor item/use-args :initform nil)))
 
 (defclass inventory (component)
   ((capacity :initarg :capacity :accessor inventory/capacity)
@@ -73,6 +75,7 @@
                              :message "You cannot carry any more, your inventory is full")))
         (t
          (setf results (list :item-added item
-                             :message (format nil "You pick up the ~A" (entity/name item))))
+                             :message (format nil "You pick up the ~A" (entity/name item))
+                             :message-color (blt:yellow)))
          (setf items (append items (list item))))))
     results))

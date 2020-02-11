@@ -148,7 +148,7 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
     (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
           (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
       (unless (entity-at entities x y)
-        (let* ((item-component (make-instance 'item))
+        (let* ((item-component (make-instance 'item :use-function #'heal :use-args '(:heal-amount 4)))
                (potion (make-instance 'entity :name "Healing Potion" :x x :y y :color (blt:purple)
                                             :item item-component
                                            :char #\! :blocks nil :render-order :item)))

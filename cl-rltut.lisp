@@ -103,10 +103,13 @@
 
 (defun handle-player-results (game-state player player-turn-results log)
   (let ((message (getf player-turn-results :message))
+        (message-color (if (getf player-turn-results :message-color)
+                           (getf player-turn-results :message-color)
+                           (blt:white)))
         (dead-entity (getf player-turn-results :dead))
         (item-added (getf player-turn-results :item-added)))
     (when message
-      (add-message log message))
+      (add-message log message :color message-color))
     (when dead-entity
       (cond ((equal dead-entity player)
              (setf (values message (game-state/state game-state))
@@ -156,8 +159,15 @@
     (when (and inventory-index
                (not (eql (game-state/previous-state game-state) :player-dead))
                (< inventory-index (length (inventory/items (entity/inventory player)))))
-      (let ((item (nth inventory-index (inventory/items (entity/inventory player)))))
-        (format t "item: ~A~%" item)))
+      (let* ((item (nth inventory-index (inventory/items (entity/inventory player))))
+             (use-result (funcall (item/use-function (entity/item item)) (entity/item item) player)))
+        (setf player-turn-results use-result)
+        (when (getf use-result :consumed)
+          (setf (game-state/state game-state) :enemy-turn)
+          (setf (inventory/items (entity/inventory player))
+                (remove-if #'(lambda (i)
+                               (eql i item))
+                           (inventory/items (entity/inventory player)))))))
 
     (when exit
       (if (eql (game-state/state game-state) :show-inventory)
