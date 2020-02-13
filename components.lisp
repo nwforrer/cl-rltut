@@ -79,3 +79,17 @@
                              :message-color (blt:yellow)))
          (setf items (append items (list item))))))
     results))
+
+(defgeneric drop-item (inventory item))
+(defmethod drop-item ((inventory inventory) (item entity))
+  (let ((results nil))
+    (with-slots (items) inventory
+      (with-slots (x y) (component/owner inventory)
+        (setf (entity/x item) x
+              (entity/y item) y
+              items (remove-if #'(lambda (i)
+                                   (eql i item))
+                               items)
+              results (list :item-dropped item
+                            :message (format nil "You dropped the ~A" (entity/name item))
+                            :message-color (blt:yellow)))))))

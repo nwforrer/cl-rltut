@@ -51,7 +51,11 @@
         (setf (blt:color) (blt:yellow))
         (blt:print (1+ (panel/x stats-panel)) (1+ (panel/y stats-panel)) entity-names))))
 
-  (when (eql (game-state/state game-state) :show-inventory)
-    (inventory-menu "Inventory" (entity/inventory player) 25 screen-width screen-height))
+  (when (or (eql (game-state/state game-state) :show-inventory)
+            (eql (game-state/state game-state) :drop-inventory))
+    (let ((inventory-title (if (eql (game-state/state game-state) :show-inventory)
+                               "Press key next to item to use it, or Esc to cancel."
+                               "Press key next to item to drop it, or Esc to cancel.")))
+      (inventory-menu inventory-title (entity/inventory player) 50 screen-width screen-height)))
 
   (blt:refresh))

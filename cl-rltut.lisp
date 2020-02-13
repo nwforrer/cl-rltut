@@ -27,7 +27,8 @@
          (handle-player-turn-keys))
         ((eql (game-state/state game-state) :player-dead)
          (handle-player-dead-keys))
-        ((eql (game-state/state game-state) :show-inventory)
+        ((or (eql (game-state/state game-state) :show-inventory)
+             (eql (game-state/state game-state) :drop-inventory))
          (handle-inventory-keys))))
 
 (defun handle-player-turn-keys ()
@@ -43,6 +44,7 @@
                   (:n (list :move (cons 1 1)))
                   (:g (list :pickup t))
                   (:i (list :show-inventory t))
+                  (:d (list :drop-inventory t))
                   (:escape (list :quit t))
                   (:close (list :quit t)))))
 
@@ -74,7 +76,8 @@
   (let ((player-turn-results nil)
         (move (getf action :move))
         (pickup (getf action :pickup))
-        (show-inventory (getf action :show-inventory)))
+        (show-inventory (getf action :show-inventory))
+        (drop-inventory (getf action :drop-inventory)))
     (when move
       (let ((destination-x (+ (entity/x player) (car move)))
             (destination-y (+ (entity/y player) (cdr move))))
@@ -98,6 +101,11 @@
       (with-slots (previous-state state) game-state
         (setf previous-state state
               state :show-inventory)))
+
+    (when drop-inventory
+      (with-slots (previous-state state) game-state
+        (setf previous-state state
+              state :drop-inventory)))
 
     (values player-turn-results game-state)))
 
@@ -159,18 +167,27 @@
     (when (and inventory-index
                (not (eql (game-state/previous-state game-state) :player-dead))
                (< inventory-index (length (inventory/items (entity/inventory player)))))
-      (let* ((item (nth inventory-index (inventory/items (entity/inventory player))))
-             (use-result (funcall (item/use-function (entity/item item)) (entity/item item) player)))
-        (setf player-turn-results use-result)
-        (when (getf use-result :consumed)
-          (setf (game-state/state game-state) :enemy-turn)
-          (setf (inventory/items (entity/inventory player))
-                (remove-if #'(lambda (i)
-                               (eql i item))
-                           (inventory/items (entity/inventory player)))))))
+      (let ((item (nth inventory-index (inventory/items (entity/inventory player)))))
+        (cond ((eql (game-state/state game-state) :show-inventory)
+               (let ((use-result (funcall (item/use-function (entity/item item)) (entity/item item) player)))
+                 (setf player-turn-results use-result)
+                 (when (getf use-result :consumed)
+                   (setf (game-state/state game-state) :enemy-turn)
+                   (setf (inventory/items (entity/inventory player))
+                         (remove-if #'(lambda (i)
+                                        (eql i item))
+                                    (inventory/items (entity/inventory player)))))))
+              ((eql (game-state/state game-state) :drop-inventory)
+               (let ((dropped-result (drop-item (entity/inventory player) item)))
+                 (setf player-turn-results dropped-result)
+                 (when (getf dropped-result :item-dropped)
+                   (setf (game-state/state game-state) :enemy-turn)
+                   (setf (game-state/entities game-state)
+                         (append (game-state/entities game-state) (list (getf dropped-result :item-dropped))))))))))
 
     (when exit
-      (if (eql (game-state/state game-state) :show-inventory)
+      (if (or (eql (game-state/state game-state) :show-inventory)
+              (eql (game-state/state game-state) :drop-inventory))
           (setf (game-state/state game-state) (game-state/previous-state game-state))
           (setf (game-state/running game-state) nil)))
 
