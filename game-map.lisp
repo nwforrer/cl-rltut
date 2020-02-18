@@ -111,10 +111,10 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
         (incf num-rooms)))))
 
 (defun entity-at (entities x y)
-  (dolist (entity entities)
-    (if (and (= (entity/x entity) x)
-             (= (entity/y entity) y))
-        (return entity))))
+  (find-if #'(lambda (e)
+               (and (= (entity/x e) x
+                       (entity/y e) y)))
+           entities))
 
 (defun blocking-entity-at (entities x y)
   (dolist (entity entities)
@@ -145,13 +145,14 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
 
 (defun place-items (room entities num-items)
   (dotimes (item-index num-items)
-    (let ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
-          (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room)))))
-      (unless (entity-at entities x y)
+    (let* ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
+           (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room))))
+           (existing-entity (entity-at entities x y)))
+      (unless existing-entity
         (let* ((item-component (make-instance 'item :use-function #'heal :use-args '(:heal-amount 4)))
                (potion (make-instance 'entity :name "Healing Potion" :x x :y y :color (blt:purple)
-                                            :item item-component
-                                           :char #\! :blocks nil :render-order :item)))
+                                              :item item-component
+                                              :char #\! :blocks nil :render-order :item)))
           (nconc entities (list potion)))))))
 
 (defgeneric place-entities (map room entities max-enemies-per-room max-items-per-room))

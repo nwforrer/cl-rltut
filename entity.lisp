@@ -27,8 +27,8 @@
 
 (defmethod print-object ((obj entity) stream)
   (print-unreadable-object (obj stream :type t)
-    (with-slots (name) obj
-      (format stream "~A" name))))
+    (with-slots (name x y) obj
+      (format stream "~A (~A,~A)" name x y))))
 
 (defmethod move ((e entity) dx dy)
   (incf (entity/x e) dx)

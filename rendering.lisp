@@ -3,7 +3,8 @@
 (defparameter *render-order*
   '(:corpse 1
     :item 2
-    :actor 3))
+    :actor 3
+    :item 4))
 
 (defun render-order-compare (entity-1 entity-2)
   (< (getf *render-order* (entity/render-order entity-1))
@@ -41,7 +42,7 @@
                (setf (blt:cell-char x y) #\Space))))))
   (let ((entities (game-state/entities game-state)))
     (mapc #'(lambda (entity) (draw entity (game-map/tiles map)))
-          (sort entities #'render-order-compare))
+          (sort (copy-seq entities) #'render-order-compare))
     (setf (blt:background-color) (blt:black)
           (blt:color) (blt:white))
     (render-panel stats-panel)

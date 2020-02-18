@@ -196,7 +196,7 @@
     (when (eql (game-state/state game-state) :enemy-turn)
       (setf game-state (enemy-turn game-state player map log))
       (when (eql (game-state/state game-state) :player-dead)
-          (return-from game-tick game-state))
+        (return-from game-tick game-state))
       (setf (game-state/state game-state) :player-turn)))
 
   game-state)
