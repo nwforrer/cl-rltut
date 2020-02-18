@@ -3,8 +3,7 @@
 (defparameter *render-order*
   '(:corpse 1
     :item 2
-    :actor 3
-    :item 4))
+    :actor 3))
 
 (defun render-order-compare (entity-1 entity-2)
   (< (getf *render-order* (entity/render-order entity-1))
