@@ -1,7 +1,7 @@
 (in-package :cl-rltut)
 
 (defun menu (header options width screen-width screen-height)
-  (assert (< (length options) 26))
+  (assert (<= (length options) 26))
 
   (let* ((header-height 3)
          (height (+ (length options) header-height 1))

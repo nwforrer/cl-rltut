@@ -128,10 +128,7 @@
     (when item-added
       (setf (game-state/entities game-state) (remove-if
                                               #'(lambda (entity)
-                                                  (and (eql (entity/name entity)
-                                                            (entity/name item-added))
-                                                       (= (entity/x entity) (entity/x item-added))
-                                                       (= (entity/y entity) (entity/y item-added))))
+                                                  (eql entity item-added))
                                               (game-state/entities game-state))
             (game-state/state game-state) :enemy-turn)))
   game-state)
