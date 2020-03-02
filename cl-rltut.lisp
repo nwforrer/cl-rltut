@@ -13,7 +13,7 @@
 (defparameter *max-rooms* 30)
 
 (defparameter *max-enemies-per-room* 5)
-(defparameter *max-items-per-room* 2)
+(defparameter *max-items-per-room* 5)
 
 (defparameter *color-map* (list :dark-wall (blt:rgba 0 0 100)
                                 :dark-ground (blt:rgba 50 50 150)
@@ -166,7 +166,10 @@
                (< inventory-index (length (inventory/items (entity/inventory player)))))
       (let ((item (nth inventory-index (inventory/items (entity/inventory player)))))
         (cond ((eql (game-state/state game-state) :show-inventory)
-               (let ((use-result (funcall (item/use-function (entity/item item)) (entity/item item) player)))
+               (let* ((item-comp (entity/item item))
+                      (use-result (funcall (item/use-function item-comp) item-comp player :args (append (item/use-args item-comp)
+                                                                                                        (list :entities (game-state/entities game-state)
+                                                                                                              :map map)))))
                  (setf player-turn-results use-result)
                  (when (getf use-result :consumed)
                    (setf (game-state/state game-state) :enemy-turn)

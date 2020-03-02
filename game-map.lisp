@@ -147,13 +147,22 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
   (dotimes (item-index num-items)
     (let* ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
            (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room))))
-           (existing-entity (entity-at entities x y)))
+           (existing-entity (entity-at entities x y))
+           (item-chance (random 101)))
       (unless existing-entity
-        (let* ((item-component (make-instance 'item :use-function #'heal :use-args '(:heal-amount 4)))
-               (potion (make-instance 'entity :name "Healing Potion" :x x :y y :color (blt:purple)
-                                              :item item-component
-                                              :char #\! :blocks nil :render-order :item)))
-          (nconc entities (list potion)))))))
+        (cond ((< item-chance 70)
+
+               (let* ((item-component (make-instance 'item :use-function #'heal :use-args '(:heal-amount 4)))
+                      (potion (make-instance 'entity :name "Healing Potion" :x x :y y :color (blt:purple)
+                                                     :item item-component
+                                                     :char #\! :blocks nil :render-order :item)))
+                 (nconc entities (list potion))))
+              (t
+               (let* ((item-component (make-instance 'item :use-function #'cast-lightning :use-args '(:damage 20 :max-range 5)))
+                      (potion (make-instance 'entity :name "Lightning Scroll" :x x :y y :color (blt:yellow)
+                                                     :item item-component
+                                                     :char #\# :blocks nil :render-order :item)))
+                 (nconc entities (list potion)))))))))
 
 (defgeneric place-entities (map room entities max-enemies-per-room max-items-per-room))
 
