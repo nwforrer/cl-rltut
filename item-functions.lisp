@@ -83,3 +83,31 @@
           (t
            (setf results (list :consumed nil :target nil :message (format nil "You cannot target a tile outside your field of view") :message-color (blt:yellow)))))
     results))
+
+(defun cast-confuse (item caster &key args)
+  (declare (ignore item caster))
+  (let* ((entities (getf args :entities))
+         (target-x (getf args :target-x))
+         (target-y (getf args :target-y))
+         (map (getf args :map))
+         (in-sight (tile/visible (aref (game-map/tiles map) target-x target-y)))
+         (results nil))
+    (cond (in-sight
+           (dolist (entity entities)
+             (when (and (= target-x (entity/x entity))
+                        (= target-y (entity/y entity)))
+               (let ((confused-ai (make-instance 'confused-monster
+                                                 :previous-ai (entity/ai entity)
+                                                 :num-turns 10
+                                                 :owner entity)))
+                 (setf (entity/ai entity) confused-ai)
+                 (setf results (list :consumed t
+                                     :target entity
+                                     :message (format nil "The eyes of the ~A look vacant, as he starts to stumble around!" (entity/name entity))
+                                     :message-color (blt:green)))))))
+          (t
+           (setf results (list :consumed nil
+                               :target nil
+                               :message (format nil "You cannot target a tile outside your field of view.")
+                               :message-color (blt:yellow)))))
+    results))

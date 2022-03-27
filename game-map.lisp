@@ -148,7 +148,7 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
     (let* ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
            (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room))))
            (existing-entity (entity-at entities x y))
-           (item-chance (random 85)))
+           (item-chance (random 101)))
       (unless existing-entity
         (cond ((< item-chance 70)
 
@@ -157,7 +157,7 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
                                                      :item item-component
                                                      :char #\! :blocks nil :render-order :item)))
                  (nconc entities (list potion))))
-              ((< item-chance 85)
+              ((< item-chance 80)
                (let* ((item-component (make-instance 'item
                                                      :use-function #'cast-fireball
                                                      :use-args '(:damage 12 :radius 3)
@@ -167,6 +167,15 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
                                                      :item item-component
                                                      :char #\# :blocks nil :render-order :item)))
                  (nconc entities (list fireball))))
+              ((< item-chance 90)
+               (let* ((item-component (make-instance 'item
+                                                     :use-function #'cast-confuse
+                                                     :targeting t
+                                                     :targeting-message "Left-click a an enemy to confuse it, or right-click to cancel"))
+                      (confusion-scroll (make-instance 'entity :name "Confusion Scroll" :x x :y y :color (blt:purple)
+                                                     :item item-component
+                                                     :char #\# :blocks nil :render-order :item)))
+                 (nconc entities (list confusion-scroll))))
               (t
                (let* ((item-component (make-instance 'item :use-function #'cast-lightning :use-args '(:damage 20 :max-range 5)))
                       (potion (make-instance 'entity :name "Lightning Scroll" :x x :y y :color (blt:yellow)
