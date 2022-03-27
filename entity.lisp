@@ -49,6 +49,11 @@
         (dy (- (entity/y other) (entity/y e))))
     (sqrt (+ (expt dx 2) (expt dy 2)))))
 
+(defmethod distance-to-location ((e entity) target-x target-y)
+  (let ((dx (- target-x (entity/x e)))
+        (dy (- target-y (entity/y e))))
+    (sqrt (+ (expt dx 2) (expt dy 2)))))
+
 (defmethod draw ((e entity) tiles)
   (with-slots (x y char color) e
     (if (tile/visible (aref tiles x y))

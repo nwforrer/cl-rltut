@@ -148,7 +148,7 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
     (let* ((x (+ (random (round (/ (- (rect/x2 room) (rect/x1 room) 1) 2))) (1+ (rect/x1 room))))
            (y (+ (random (round (/ (- (rect/y2 room) (rect/y1 room) 1) 2))) (1+ (rect/y1 room))))
            (existing-entity (entity-at entities x y))
-           (item-chance (random 101)))
+           (item-chance (random 85)))
       (unless existing-entity
         (cond ((< item-chance 70)
 
@@ -157,6 +157,16 @@ Initializes each tile in the TILES array with BLOCKED set to INITIAL-BLOCKED-VAL
                                                      :item item-component
                                                      :char #\! :blocks nil :render-order :item)))
                  (nconc entities (list potion))))
+              ((< item-chance 85)
+               (let* ((item-component (make-instance 'item
+                                                     :use-function #'cast-fireball
+                                                     :use-args '(:damage 12 :radius 3)
+                                                     :targeting t
+                                                     :targeting-message "Left-click a target tile for the fireball, or right-click to cancel"))
+                      (fireball (make-instance 'entity :name "Fireball Scroll" :x x :y y :color (blt:red)
+                                                     :item item-component
+                                                     :char #\# :blocks nil :render-order :item)))
+                 (nconc entities (list fireball))))
               (t
                (let* ((item-component (make-instance 'item :use-function #'cast-lightning :use-args '(:damage 20 :max-range 5)))
                       (potion (make-instance 'entity :name "Lightning Scroll" :x x :y y :color (blt:yellow)

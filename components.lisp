@@ -59,7 +59,9 @@
 
 (defclass item (component)
   ((use-function :initarg :use-function :accessor item/use-function :initform nil)
-   (use-args :initarg :use-args :accessor item/use-args :initform nil)))
+   (use-args :initarg :use-args :accessor item/use-args :initform nil)
+   (targeting :initarg :targeting :accessor item/targeting :initform nil)
+   (targeting-message :initarg :targeting-message :accessor item/targeting-message :initform nil)))
 
 (defclass inventory (component)
   ((capacity :initarg :capacity :accessor inventory/capacity)

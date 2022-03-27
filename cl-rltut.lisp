@@ -29,7 +29,9 @@
          (handle-player-dead-keys))
         ((or (eql (game-state/state game-state) :show-inventory)
              (eql (game-state/state game-state) :drop-inventory))
-         (handle-inventory-keys))))
+         (handle-inventory-keys))
+        ((eql (game-state/state game-state) :targeting)
+         (handle-targeting-keys))))
 
 (defun handle-player-turn-keys ()
   (when (blt:has-input-p)
@@ -64,6 +66,13 @@
             (return-from handle-inventory-keys (list :inventory-index index)))))
       (blt:key-case key
                     (:escape (list :quit t))))))
+
+(defun handle-targeting-keys ()
+  (when (blt:has-input-p)
+    (blt:key-case (blt:read)
+                  (:mouse-left (list :left-click t))
+                  (:mouse-right (list :right-click t))
+                  (:escape (list :quit t)))))
 
 (defun config ()
   (blt:set "window.resizeable = true")
@@ -166,17 +175,10 @@
                (< inventory-index (length (inventory/items (entity/inventory player)))))
       (let ((item (nth inventory-index (inventory/items (entity/inventory player)))))
         (cond ((eql (game-state/state game-state) :show-inventory)
-               (let* ((item-comp (entity/item item))
-                      (use-result (funcall (item/use-function item-comp) item-comp player :args (append (item/use-args item-comp)
-                                                                                                        (list :entities (game-state/entities game-state)
-                                                                                                              :map map)))))
-                 (setf player-turn-results use-result)
-                 (when (getf use-result :consumed)
-                   (setf (game-state/state game-state) :enemy-turn)
-                   (setf (inventory/items (entity/inventory player))
-                         (remove-if #'(lambda (i)
-                                        (eql i item))
-                                    (inventory/items (entity/inventory player)))))))
+               (let ((item-comp (entity/item item)))
+                 (use-item item game-state log player :args (append (item/use-args item-comp)
+                                                                         (list :entities (game-state/entities game-state)
+                                                                               :map map)))))
               ((eql (game-state/state game-state) :drop-inventory)
                (let ((dropped-result (drop-item (entity/inventory player) item)))
                  (setf player-turn-results dropped-result)
@@ -184,6 +186,18 @@
                    (setf (game-state/state game-state) :enemy-turn)
                    (setf (game-state/entities game-state)
                          (append (game-state/entities game-state) (list (getf dropped-result :item-dropped))))))))))
+
+    (when (eql (game-state/state game-state) :targeting)
+      (cond ((getf action :left-click)
+             (let* ((targeting-item (game-state/targeting-item game-state))
+                    (target-x (blt:mouse-x))
+                    (target-y (blt:mouse-y))
+                    (use-result (use-item targeting-item game-state log player :args (append (item/use-args (entity/item targeting-item))
+                                                                                                                (list :entities (game-state/entities game-state)
+                                                                                                                      :map map
+                                                                                                                      :target-x target-x
+                                                                                                                      :target-y target-y)))))
+               (setf player-turn-results use-result)))))
 
     (when exit
       (if (or (eql (game-state/state game-state) :show-inventory)
